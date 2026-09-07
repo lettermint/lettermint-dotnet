@@ -1,0 +1,479 @@
+[
+  {
+    "surface": "sending",
+    "operationId": "v1.sendMail",
+    "class": "EmailClient",
+    "method": "SendAsync",
+    "verb": "POST",
+    "path": "/send",
+    "raw": false
+  },
+  {
+    "surface": "sending",
+    "operationId": "v1.sendBatchMail",
+    "class": "EmailClient",
+    "method": "SendBatchAsync",
+    "verb": "POST",
+    "path": "/send/batch",
+    "raw": false
+  },
+  {
+    "surface": "sending",
+    "operationId": "v1.ping",
+    "class": "EmailClient",
+    "method": "PingAsync",
+    "verb": "GET",
+    "path": "/ping",
+    "raw": true
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.index",
+    "class": "DomainsEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/domains",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.store",
+    "class": "DomainsEndpoint",
+    "method": "CreateAsync",
+    "verb": "POST",
+    "path": "/domains",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.show",
+    "class": "DomainsEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/domains/{domainId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.destroy",
+    "class": "DomainsEndpoint",
+    "method": "DeleteAsync",
+    "verb": "DELETE",
+    "path": "/domains/{domainId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.verifyDnsRecords",
+    "class": "DomainsEndpoint",
+    "method": "VerifyDnsRecordsAsync",
+    "verb": "POST",
+    "path": "/domains/{domainId}/dns-records/verify",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.verifySpecificDnsRecord",
+    "class": "DomainsEndpoint",
+    "method": "VerifyDnsRecordAsync",
+    "verb": "POST",
+    "path": "/domains/{domainId}/dns-records/{recordId}/verify",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "domain.updateProjects",
+    "class": "DomainsEndpoint",
+    "method": "UpdateProjectsAsync",
+    "verb": "PUT",
+    "path": "/domains/{domainId}/projects",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "v1.ping",
+    "class": "ApiClient",
+    "method": "PingAsync",
+    "verb": "GET",
+    "path": "/ping",
+    "raw": true
+  },
+  {
+    "surface": "team",
+    "operationId": "v1.blockedFileTypes",
+    "class": "ApiClient",
+    "method": "BlockedFileTypesAsync",
+    "verb": "GET",
+    "path": "/blocked-file-types",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "rescheduleMessage",
+    "class": "MessagesEndpoint",
+    "method": "RescheduleAsync",
+    "verb": "PATCH",
+    "path": "/messages/{messageId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "message.show",
+    "class": "MessagesEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/messages/{messageId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "cancelScheduledMessage",
+    "class": "MessagesEndpoint",
+    "method": "CancelAsync",
+    "verb": "POST",
+    "path": "/messages/{messageId}/cancel",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "message.index",
+    "class": "MessagesEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/messages",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "message.events",
+    "class": "MessagesEndpoint",
+    "method": "EventsAsync",
+    "verb": "GET",
+    "path": "/messages/{messageId}/events",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "message.source",
+    "class": "MessagesEndpoint",
+    "method": "SourceAsync",
+    "verb": "GET",
+    "path": "/messages/{messageId}/source",
+    "raw": true
+  },
+  {
+    "surface": "team",
+    "operationId": "message.html",
+    "class": "MessagesEndpoint",
+    "method": "HtmlAsync",
+    "verb": "GET",
+    "path": "/messages/{messageId}/html",
+    "raw": true
+  },
+  {
+    "surface": "team",
+    "operationId": "message.text",
+    "class": "MessagesEndpoint",
+    "method": "TextAsync",
+    "verb": "GET",
+    "path": "/messages/{messageId}/text",
+    "raw": true
+  },
+  {
+    "surface": "team",
+    "operationId": "processInboundMessage",
+    "class": "MessagesEndpoint",
+    "method": "ProcessAsync",
+    "verb": "POST",
+    "path": "/messages/{messageId}/process",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.index",
+    "class": "ProjectsEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/projects",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.store",
+    "class": "ProjectsEndpoint",
+    "method": "CreateAsync",
+    "verb": "POST",
+    "path": "/projects",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.show",
+    "class": "ProjectsEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/projects/{projectId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.update",
+    "class": "ProjectsEndpoint",
+    "method": "UpdateAsync",
+    "verb": "PUT",
+    "path": "/projects/{projectId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.destroy",
+    "class": "ProjectsEndpoint",
+    "method": "DeleteAsync",
+    "verb": "DELETE",
+    "path": "/projects/{projectId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "project.rotateToken",
+    "class": "ProjectsEndpoint",
+    "method": "RotateTokenAsync",
+    "verb": "POST",
+    "path": "/projects/{projectId}/rotate-token",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.index",
+    "class": "RoutesEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/projects/{projectId}/routes",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.store",
+    "class": "RoutesEndpoint",
+    "method": "CreateAsync",
+    "verb": "POST",
+    "path": "/projects/{projectId}/routes",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.show",
+    "class": "RoutesEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/routes/{routeId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.update",
+    "class": "RoutesEndpoint",
+    "method": "UpdateAsync",
+    "verb": "PUT",
+    "path": "/routes/{routeId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.destroy",
+    "class": "RoutesEndpoint",
+    "method": "DeleteAsync",
+    "verb": "DELETE",
+    "path": "/routes/{routeId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "route.verifyInboundDomain",
+    "class": "RoutesEndpoint",
+    "method": "VerifyInboundDomainAsync",
+    "verb": "POST",
+    "path": "/routes/{routeId}/verify-inbound-domain",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "stats.index",
+    "class": "StatsEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/stats",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "suppression.index",
+    "class": "SuppressionsEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/suppressions",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "suppression.store",
+    "class": "SuppressionsEndpoint",
+    "method": "CreateAsync",
+    "verb": "POST",
+    "path": "/suppressions",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "suppression.destroy",
+    "class": "SuppressionsEndpoint",
+    "method": "DeleteAsync",
+    "verb": "DELETE",
+    "path": "/suppressions/{suppressionId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.show",
+    "class": "TeamEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/team",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.update",
+    "class": "TeamEndpoint",
+    "method": "UpdateAsync",
+    "verb": "PUT",
+    "path": "/team",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.usage",
+    "class": "TeamEndpoint",
+    "method": "UsageAsync",
+    "verb": "GET",
+    "path": "/team/usage",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.roles",
+    "class": "TeamEndpoint",
+    "method": "RolesAsync",
+    "verb": "GET",
+    "path": "/team/roles",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.members",
+    "class": "TeamEndpoint",
+    "method": "MembersAsync",
+    "verb": "GET",
+    "path": "/team/members",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.members.show",
+    "class": "TeamEndpoint",
+    "method": "RetrieveMemberAsync",
+    "verb": "GET",
+    "path": "/team/members/{userId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "team.members.assignment.update",
+    "class": "TeamEndpoint",
+    "method": "UpdateMemberAssignmentAsync",
+    "verb": "PUT",
+    "path": "/team/members/{userId}/assignment",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.index",
+    "class": "WebhooksEndpoint",
+    "method": "ListAsync",
+    "verb": "GET",
+    "path": "/webhooks",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.store",
+    "class": "WebhooksEndpoint",
+    "method": "CreateAsync",
+    "verb": "POST",
+    "path": "/webhooks",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.show",
+    "class": "WebhooksEndpoint",
+    "method": "RetrieveAsync",
+    "verb": "GET",
+    "path": "/webhooks/{webhookId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.update",
+    "class": "WebhooksEndpoint",
+    "method": "UpdateAsync",
+    "verb": "PUT",
+    "path": "/webhooks/{webhookId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.destroy",
+    "class": "WebhooksEndpoint",
+    "method": "DeleteAsync",
+    "verb": "DELETE",
+    "path": "/webhooks/{webhookId}",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.test",
+    "class": "WebhooksEndpoint",
+    "method": "TestAsync",
+    "verb": "POST",
+    "path": "/webhooks/{webhookId}/test",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.regenerateSecret",
+    "class": "WebhooksEndpoint",
+    "method": "RegenerateSecretAsync",
+    "verb": "POST",
+    "path": "/webhooks/{webhookId}/regenerate-secret",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.deliveries",
+    "class": "WebhooksEndpoint",
+    "method": "DeliveriesAsync",
+    "verb": "GET",
+    "path": "/webhooks/{webhookId}/deliveries",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "webhook.showDelivery",
+    "class": "WebhooksEndpoint",
+    "method": "ShowDeliveryAsync",
+    "verb": "GET",
+    "path": "/webhooks/{webhookId}/deliveries/{deliveryId}",
+    "raw": false
+  }
+]

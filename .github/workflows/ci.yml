@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Set package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            package_version="${RELEASE_TAG#v}"
+            if [[ ! "$package_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+              echo "Invalid release tag: $RELEASE_TAG" >&2
+              exit 1
+            fi
+          else
+            package_version=$(dotnet msbuild src/Lettermint/Lettermint.csproj -getProperty:Version)
+          fi
+          echo "PACKAGE_VERSION=$package_version" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v7
+        if: runner.os == 'Linux'
+        with:
+          python-version: '3.12'
+      - name: Check generated source
+        if: runner.os == 'Linux'
+        run: |
+          python tools/generate.py --check
+          python -m unittest discover -s tools -p "test_*.py"
+      - name: Test .NET 8 and 10
+        run: dotnet test tests/Lettermint.Tests/Lettermint.Tests.csproj -c Release -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true
+      - name: Pack tested build
+        if: runner.os == 'Linux'
+        run: dotnet pack src/Lettermint/Lettermint.csproj -c Release --no-build -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true -o artifacts
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'Linux'
+        with:
+          name: package
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+          retention-days: 30
