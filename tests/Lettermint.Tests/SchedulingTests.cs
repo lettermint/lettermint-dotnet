@@ -36,7 +36,7 @@ public class SchedulingTests
         using var email = LettermintClient.Email("project-token", new ClientOptions { HttpClient = http });
         var response = await email.From("a@example.com").To("b@example.com").Subject("Scheduled email")
             .Text("Hello there").ScheduledAt("tomorrow at 9am")
-            .Tags(new SendMailRequestTagsItem { Name = "campaign", Value = "welcome" })
+            .Tags(new MessageTag("campaign", "welcome"))
             .Settings(new() { Tls = TlsPolicy.Enforced }).SendAsync();
         Assert.Equal(MessageStatus.Scheduled, response.Status);
         await email.SendBatchAsync(new List<SendBatchMailRequestItem>
@@ -49,6 +49,22 @@ public class SchedulingTests
             }
         });
         Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public void ValidatesTypedMessageTagsAndKeepsLegacyInput()
+    {
+        Assert.Throws<ArgumentException>(() => new MessageTag("invalid name", "value"));
+        Assert.Throws<ArgumentException>(() => new MessageTag("__LETTERMINT_internal", "value"));
+
+        using var email = LettermintClient.Email("project-token");
+        var builder = email.From("a@example.com").To("b@example.com").Subject("Tags").Text("body");
+        Assert.Throws<ArgumentException>(() => builder.Tags(
+            new MessageTag("same", "one"), new MessageTag("same", "two")));
+        Assert.Throws<ArgumentException>(() => builder.Tag("legacy").Tags(
+            Enumerable.Range(0, 20).Select(index => new MessageTag($"tag_{index}", "value")).ToArray()));
+
+        builder.Tags(new SendMailRequestTagsItem { Name = "legacy_map", Value = "value" });
     }
 
     [Fact]
