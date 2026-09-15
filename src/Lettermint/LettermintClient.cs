@@ -38,8 +38,24 @@ public sealed class EmailBuilder
     public EmailBuilder Text(string? value) { payload.Text = value; return this; }
     public EmailBuilder Route(string? value) { payload.Route = value; return this; }
     public EmailBuilder ScheduledAt(string value) { payload.ScheduledAt = value; return this; }
-    public EmailBuilder Tags(params SendMailRequestTagsItem[] values) { payload.Tags = [.. values]; return this; }
-    public EmailBuilder Tag(string? value) { payload.Tag = value; return this; }
+    public EmailBuilder Tags(params MessageTag[] values)
+    {
+        ValidateTags(values.Select(value => (value.Name, value.Value)));
+        payload.Tags = [.. values.Select(value => new SendMailRequestTagsItem { Name = value.Name, Value = value.Value })];
+        return this;
+    }
+    public EmailBuilder Tags(params SendMailRequestTagsItem[] values)
+    {
+        ValidateTags(values.Select(value => (value.Name ?? "", value.Value ?? "")));
+        payload.Tags = [.. values];
+        return this;
+    }
+    public EmailBuilder Tag(string? value)
+    {
+        if (value is not null && payload.Tags?.Count >= 20) throw new ArgumentException("A legacy tag and no more than 19 message tags are permitted", nameof(value));
+        payload.Tag = value;
+        return this;
+    }
     public EmailBuilder Headers(IReadOnlyDictionary<string, string> values) { payload.Headers = new(values); return this; }
     public EmailBuilder Metadata(IReadOnlyDictionary<string, string> values) { payload.Metadata = new(values); return this; }
     public EmailBuilder Settings(SendMailRequestSettings settings) { payload.Settings = settings; return this; }
@@ -51,4 +67,14 @@ public sealed class EmailBuilder
     }
     public Task<SendEmailResponse> SendAsync(CancellationToken cancellationToken = default)
         => client.SendAsync(payload, new RequestOptions { IdempotencyKey = idempotencyKey }, cancellationToken);
+
+    private void ValidateTags(IEnumerable<(string Name, string Value)> values)
+    {
+        var tags = values.ToList();
+        var maximum = payload.Tag is null ? 20 : 19;
+        if (tags.Count > maximum) throw new ArgumentException($"No more than {maximum} message tags are permitted", nameof(values));
+        foreach (var tag in tags) _ = new MessageTag(tag.Name, tag.Value);
+        if (tags.Select(tag => tag.Name).Distinct(StringComparer.Ordinal).Count() != tags.Count)
+            throw new ArgumentException("Message tag names must be unique and case-sensitive", nameof(values));
+    }
 }

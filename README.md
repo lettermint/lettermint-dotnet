@@ -77,7 +77,10 @@ var scheduled = await email.From("sender@example.com")
     .Subject("Scheduled email")
     .Text("Hello from Lettermint.")
     .ScheduledAt("tomorrow at 9am")
-    .Tags(new SendMailRequestTagsItem { Name = "campaign", Value = "welcome" })
+    .Tag("legacy-tag")
+    .Tags(
+        new MessageTag("campaign", "welcome"),
+        new MessageTag("customer", "new"))
     .Settings(new SendMailRequestSettings { Tls = TlsPolicy.Enforced })
     .SendAsync();
 
@@ -85,6 +88,9 @@ await email.RescheduleAsync(scheduled.MessageId!,
     new RescheduleMessageRequest { ScheduledAt = "tomorrow at 10am" });
 await email.CancelAsync(scheduled.MessageId!);
 ```
+
+`Tag()` remains available for the legacy single tag. The previous generated
+`SendMailRequestTagsItem` input also remains available.
 
 Scheduling uses the API `scheduled_at` field. Send responses expose
 `ScheduledAt` and the `Scheduled` status. Cancellation is final.
