@@ -59,6 +59,7 @@ public sealed class EmailBuilder
     public EmailBuilder Headers(IReadOnlyDictionary<string, string> values) { payload.Headers = new(values); return this; }
     public EmailBuilder Metadata(IReadOnlyDictionary<string, string> values) { payload.Metadata = new(values); return this; }
     public EmailBuilder Settings(SendMailRequestSettings settings) { payload.Settings = settings; return this; }
+    public EmailBuilder SandboxResult(SandboxResult value) { payload.SandboxResult = value; return this; }
     public EmailBuilder IdempotencyKey(string value) { idempotencyKey = value; return this; }
     public EmailBuilder Attach(string filename, string content, string? contentId = null, string? contentType = null)
     {
