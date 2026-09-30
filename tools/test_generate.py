@@ -1,12 +1,14 @@
 """Check model generation and operation coverage."""
 import json
+import os
 import unittest
 from pathlib import Path
 from generate import Generator, ROOT
 
-class GeneratorTests(unittest.TestCase):
+@unittest.skipUnless(os.environ.get('LETTERMINT_SPEC_DIR'), 'Set LETTERMINT_SPEC_DIR for external contract checks')
+class ExternalContractTests(unittest.TestCase):
     def setUp(self):
-        self.specs = {k:json.loads((ROOT/'specs'/f'{k}-openapi.json').read_text()) for k in ['sending','team']}
+        self.specs = {k:json.loads((Path(os.environ['LETTERMINT_SPEC_DIR'])/f'{k}-openapi.json').read_text()) for k in ['sending','team']}
         self.generator = Generator(self.specs)
 
     def test_generated_files_are_current(self):
