@@ -38,6 +38,15 @@ public sealed class CancelScheduledMessageResponse : ApiModel
 
 }
 
+[JsonConverter(typeof(WireEnumConverter<DeliveryMode>))]
+public enum DeliveryMode
+{
+    [EnumMember(Value = "live")]
+    Live,
+    [EnumMember(Value = "sandbox")]
+    Sandbox,
+}
+
 [JsonConverter(typeof(WireEnumConverter<DkimMode>))]
 public enum DkimMode
 {
@@ -357,6 +366,12 @@ public sealed class MessageData : ApiModel
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
 }
 
 public sealed class MessageDataTagsItem : ApiModel
@@ -554,6 +569,12 @@ public sealed class MessageListData : ApiModel
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
 }
 
 public sealed class MessageListDataTagsItem : ApiModel
@@ -573,6 +594,9 @@ public sealed class MessageRecipientData : ApiModel
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -728,6 +752,9 @@ public sealed class ProjectData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
+
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
 
 }
 
@@ -981,6 +1008,9 @@ public sealed class RouteData : ApiModel
     [JsonPropertyName("inbound_address")]
     public string? InboundAddress { get; set; }
 
+    [JsonPropertyName("inbound_mx_hostname")]
+    public string? InboundMxHostname { get; set; }
+
     [JsonPropertyName("inbound_domain")]
     public string? InboundDomain { get; set; }
 
@@ -1204,6 +1234,33 @@ public sealed class RouteVerifyInboundDomainResponseData : ApiModel
 
 }
 
+[JsonConverter(typeof(WireEnumConverter<SandboxResult>))]
+public enum SandboxResult
+{
+    [EnumMember(Value = "delivered")]
+    Delivered,
+    [EnumMember(Value = "hard_bounced")]
+    HardBounced,
+    [EnumMember(Value = "soft_bounced")]
+    SoftBounced,
+    [EnumMember(Value = "deferred")]
+    Deferred,
+    [EnumMember(Value = "failed")]
+    Failed,
+    [EnumMember(Value = "suppressed")]
+    Suppressed,
+    [EnumMember(Value = "spam_complaint")]
+    SpamComplaint,
+    [EnumMember(Value = "auto_replied")]
+    AutoReplied,
+    [EnumMember(Value = "opened")]
+    Opened,
+    [EnumMember(Value = "clicked")]
+    Clicked,
+    [EnumMember(Value = "unsubscribed")]
+    Unsubscribed,
+}
+
 public sealed class SendBatchEmailResponseItem : ApiModel
 {
     [JsonPropertyName("message_id")]
@@ -1214,6 +1271,12 @@ public sealed class SendBatchEmailResponseItem : ApiModel
 
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
+
+    [JsonPropertyName("sandbox")]
+    public bool? Sandbox { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -1267,6 +1330,9 @@ public sealed class SendBatchMailRequestItem : ApiModel
     [JsonPropertyName("attachments")]
     public List<SendBatchMailRequestItemAttachmentsItem>? Attachments { get; set; }
 
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
 }
 
 public sealed class SendBatchMailRequestItemAttachmentsItem : ApiModel
@@ -1319,6 +1385,12 @@ public sealed class SendEmailResponse : ApiModel
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
 
+    [JsonPropertyName("sandbox")]
+    public bool? Sandbox { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
 }
 
 public sealed class SendMailRequest : ApiModel
@@ -1370,6 +1442,9 @@ public sealed class SendMailRequest : ApiModel
 
     [JsonPropertyName("attachments")]
     public List<SendMailRequestAttachmentsItem>? Attachments { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -1602,6 +1677,9 @@ public sealed class StoreProjectData : ApiModel
     [JsonPropertyName("short_token")]
     public bool? ShortToken { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
 }
 
 public sealed class StoreRouteData : ApiModel
@@ -1670,6 +1748,9 @@ public sealed class StoreWebhookData : ApiModel
 
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
+
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 
@@ -2062,6 +2143,9 @@ public sealed class UpdateProjectData : ApiModel
     [JsonPropertyName("default_route_id")]
     public string? DefaultRouteId { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
 }
 
 public sealed class UpdateRouteData : ApiModel
@@ -2174,6 +2258,9 @@ public sealed class UpdateWebhookData : ApiModel
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
 }
 
 public sealed class V1BlockedFileTypesResponse : ApiModel
@@ -2226,6 +2313,9 @@ public sealed class WebhookData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
+
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 
@@ -2304,6 +2394,9 @@ public sealed class WebhookDeliveryData : ApiModel
     [JsonPropertyName("timestamp")]
     public string? Timestamp { get; set; }
 
+    [JsonPropertyName("sandbox")]
+    public bool? Sandbox { get; set; }
+
 }
 
 public sealed class WebhookDeliveryListData : ApiModel
@@ -2344,6 +2437,17 @@ public sealed class WebhookDeliveryListData : ApiModel
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
 
+}
+
+[JsonConverter(typeof(WireEnumConverter<WebhookDeliveryModeFilter>))]
+public enum WebhookDeliveryModeFilter
+{
+    [EnumMember(Value = "live")]
+    Live,
+    [EnumMember(Value = "sandbox")]
+    Sandbox,
+    [EnumMember(Value = "both")]
+    Both,
 }
 
 [JsonConverter(typeof(WireEnumConverter<WebhookDeliveryStatus>))]
@@ -2546,6 +2650,9 @@ public sealed class WebhookSecretData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
+
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 

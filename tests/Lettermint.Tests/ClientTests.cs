@@ -130,7 +130,7 @@ public class ClientTests
             bodies.Add(JsonDocument.Parse(await r.Content!.ReadAsStringAsync()).RootElement.Clone());
             if (bodies.Count == 1) Assert.Equal("key", r.Headers.GetValues("Idempotency-Key").Single());
             else Assert.False(r.Headers.Contains("Idempotency-Key"));
-            return Response("{\"message_id\":\"m1\",\"status\":\"queued\"}", HttpStatusCode.Accepted);
+            return Response("{\"message_id\":\"m1\",\"status\":\"queued\",\"sandbox\":true,\"sandbox_result\":\"clicked\"}", HttpStatusCode.Accepted);
         }
         };
         using var http = new HttpClient(handler);
@@ -140,13 +140,17 @@ public class ClientTests
             .Attach("file.txt", "aGk=", "inline", "text/plain")
             .Headers(new Dictionary<string, string> { ["X-Test"] = "1" })
             .Metadata(new Dictionary<string, string> { ["customer"] = "123" })
-            .Settings(new() { TrackOpens = false }).IdempotencyKey("key");
+            .Settings(new() { TrackOpens = false }).SandboxResult(SandboxResult.Clicked).IdempotencyKey("key");
         var second = email.From("a@example.com").To("e@example.com").Subject("Two");
-        Assert.Equal(MessageStatus.Queued, (await first.SendAsync()).Status);
+        var response = await first.SendAsync();
+        Assert.Equal(MessageStatus.Queued, response.Status);
+        Assert.True(response.Sandbox);
+        Assert.Equal(SandboxResult.Clicked, response.SandboxResult);
         await second.SendAsync();
         Assert.Equal("text/plain", bodies[0].GetProperty("attachments")[0].GetProperty("content_type").GetString());
         Assert.False(bodies[0].GetProperty("settings").GetProperty("track_opens").GetBoolean());
         Assert.Equal("123", bodies[0].GetProperty("metadata").GetProperty("customer").GetString());
+        Assert.Equal("clicked", bodies[0].GetProperty("sandbox_result").GetString());
         Assert.False(bodies[1].TryGetProperty("attachments", out _));
         Assert.False(bodies[1].TryGetProperty("metadata", out _));
     }
@@ -186,6 +190,23 @@ public class ClientTests
         Assert.False(route.Settings!.TrackOpens);
         Assert.Equal(AttachmentDelivery.Url, route.Settings.AttachmentDelivery);
         Assert.True(route.Settings.AdditionalProperties!["future"].GetBoolean());
+    }
+
+    [Fact]
+    public void SandboxContractHydratesProjectMessageAndWebhookData()
+    {
+        var project = JsonSerializer.Deserialize<ProjectData>("{\"delivery_mode\":\"sandbox\"}", LettermintJson.Options)!;
+        var message = JsonSerializer.Deserialize<MessageData>("{\"delivery_mode\":\"sandbox\",\"sandbox_result\":\"hard_bounced\"}", LettermintJson.Options)!;
+        var recipient = JsonSerializer.Deserialize<MessageRecipientData>("{\"email\":\"user@example.com\",\"name\":null,\"sandbox_result\":\"clicked\"}", LettermintJson.Options)!;
+        var delivery = JsonSerializer.Deserialize<WebhookDeliveryData>("{\"sandbox\":true}", LettermintJson.Options)!;
+        var webhook = new StoreWebhookData { DeliveryModeFilter = WebhookDeliveryModeFilter.Both };
+
+        Assert.Equal(DeliveryMode.Sandbox, project.DeliveryMode);
+        Assert.Equal(DeliveryMode.Sandbox, message.DeliveryMode);
+        Assert.Equal(SandboxResult.HardBounced, message.SandboxResult);
+        Assert.Equal(SandboxResult.Clicked, recipient.SandboxResult);
+        Assert.True(delivery.Sandbox);
+        Assert.Equal("both", webhook.ToJson().GetProperty("delivery_mode_filter").GetString());
     }
 
     [Theory]
