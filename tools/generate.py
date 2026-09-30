@@ -21,6 +21,13 @@ class Generator:
             for payload in [schemas['SendMailRequest'], schemas['SendBatchMailRequest']['items']]:
                 for field in ['headers', 'metadata']:
                     payload['properties'][field] = {'type': 'object', 'additionalProperties': {'type': 'string'}}
+            # Keep the existing sending response status enum property.
+            responses = self.specs['sending']['paths'].get('/send', {}).get('post', {}).get('responses', {})
+            for response in responses.values():
+                schema = response.get('content', {}).get('application/json', {}).get('schema', {})
+                for variant in schema.get('anyOf', [schema]):
+                    if 'status' in variant.get('properties', {}):
+                        variant['properties']['status'] = {'$ref': '#/components/schemas/MessageStatus'}
         # RouteData.php declares a serialized AttachmentDelivery enum value.
         if 'team' in self.specs:
             settings = self.specs['team']['components']['schemas'].get('RouteData', {}).get('properties', {}).get('settings', {})

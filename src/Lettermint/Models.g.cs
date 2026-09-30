@@ -1501,7 +1501,7 @@ public sealed class SendEmailResponse : ApiModel
     public string? MessageId { get; set; }
 
     [JsonPropertyName("status")]
-    public string? Status { get; set; }
+    public MessageStatus? Status { get; set; }
 
     [JsonPropertyName("sandbox")]
     public bool? Sandbox { get; set; }

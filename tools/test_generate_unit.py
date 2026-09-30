@@ -8,6 +8,18 @@ from generate import Generator, ROOT
 
 
 class GeneratorTests(unittest.TestCase):
+    def test_sending_status_keeps_the_public_enum_property(self):
+        specs = {'sending': {'components': {'schemas': {
+            'MessageStatus': {'type': 'string', 'enum': ['pending', 'scheduled']},
+            'SendMailRequest': {'type': 'object', 'properties': {}},
+            'SendBatchMailRequest': {'type': 'array', 'items': {'type': 'object', 'properties': {}}},
+        }}, 'paths': {'/send': {'post': {'operationId': 'v1.sendMail', 'responses': {'202': {'content': {'application/json': {'schema': {'anyOf': [
+            {'type': 'object', 'properties': {'status': {'type': 'string', 'const': 'pending'}}},
+            {'type': 'object', 'properties': {'status': {'type': 'string', 'const': 'scheduled'}}},
+        ]}}}}}}}}}}
+        source = Generator(specs).generate()['src/Lettermint/Models.g.cs']
+        self.assertIn('public MessageStatus? Status { get; set; }', source)
+
     def test_report_forwarding_mapping_and_project_response_compatibility(self):
         base = {'components': {'schemas': {'ProjectCreatedData': {'type': 'object', 'properties': {'api_token': {'type': 'string'}}}}}, 'paths': {}}
         mappings = {'getReportForwarding': 'RetrieveReportForwardingAsync', 'updateReportForwarding': 'UpdateReportForwardingAsync', 'deleteReportForwarding': 'DeleteReportForwardingAsync', 'verifyReportForwarding': 'VerifyReportForwardingAsync', 'resendReportForwardingCode': 'ResendReportForwardingCodeAsync', 'project.store': 'CreateAsync'}
