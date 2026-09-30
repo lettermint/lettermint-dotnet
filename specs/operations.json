@@ -28,6 +28,15 @@
   },
   {
     "surface": "team",
+    "operationId": "v1.analytics",
+    "class": "ApiClient",
+    "method": "AnalyticsAsync",
+    "verb": "POST",
+    "path": "/analytics",
+    "raw": false
+  },
+  {
+    "surface": "team",
     "operationId": "domain.index",
     "class": "DomainsEndpoint",
     "method": "ListAsync",
@@ -186,6 +195,51 @@
     "method": "ProcessAsync",
     "verb": "POST",
     "path": "/messages/{messageId}/process",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "getReportForwarding",
+    "class": "ProjectsEndpoint",
+    "method": "RetrieveReportForwardingAsync",
+    "verb": "GET",
+    "path": "/projects/{projectId}/report-forwarding",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "updateReportForwarding",
+    "class": "ProjectsEndpoint",
+    "method": "UpdateReportForwardingAsync",
+    "verb": "PUT",
+    "path": "/projects/{projectId}/report-forwarding",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "deleteReportForwarding",
+    "class": "ProjectsEndpoint",
+    "method": "DeleteReportForwardingAsync",
+    "verb": "DELETE",
+    "path": "/projects/{projectId}/report-forwarding",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "verifyReportForwarding",
+    "class": "ProjectsEndpoint",
+    "method": "VerifyReportForwardingAsync",
+    "verb": "POST",
+    "path": "/projects/{projectId}/report-forwarding/verify",
+    "raw": false
+  },
+  {
+    "surface": "team",
+    "operationId": "resendReportForwardingCode",
+    "class": "ProjectsEndpoint",
+    "method": "ResendReportForwardingCodeAsync",
+    "verb": "POST",
+    "path": "/projects/{projectId}/report-forwarding/resend-code",
     "raw": false
   },
   {

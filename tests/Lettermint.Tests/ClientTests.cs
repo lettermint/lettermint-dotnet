@@ -9,6 +9,49 @@ namespace Lettermint.Tests;
 
 public class ClientTests
 {
+    [Fact]
+    public async Task AnalyticsAndReportForwardingHandleTypedAndEmptyResponses()
+    {
+        var handler = new Handler();
+        using var http = new HttpClient(handler);
+        using var api = LettermintClient.Api("team-token", Options(http));
+        handler.Respond = async (request, _) =>
+        {
+            Assert.Equal("Bearer team-token", request.Headers.Authorization!.ToString());
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("/v1/analytics", request.RequestUri!.AbsolutePath);
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+            Assert.Equal("accepted", body.RootElement.GetProperty("metrics")[0].GetString());
+            return Response("{\"data\":{\"summary\":{\"metrics\":{\"accepted\":12,\"delivery_rate\":null}}},\"meta\":{\"timezone\":\"UTC\"},\"pagination\":{\"total_groups\":0,\"returned_groups\":0,\"next_cursor\":null,\"truncated\":false}}");
+        };
+        var analytics = await api.AnalyticsAsync(new V1AnalyticsRequest { Metrics = new() { V1AnalyticsRequestMetricsItem.Accepted } });
+        Assert.Equal("UTC", analytics.Meta!.Timezone);
+        Assert.Null(analytics.Data!.Summary!.Metrics!.DeliveryRate);
+        handler.Respond = (request, _) =>
+        {
+            Assert.Equal("/v1/projects/project%2Fid/report-forwarding", request.RequestUri!.AbsolutePath);
+            return Task.FromResult(Response("{\"data\":{\"destination\":null,\"verified\":false,\"verified_at\":null}}"));
+        };
+        var forwarding = await api.Projects.RetrieveReportForwardingAsync("project/id");
+        Assert.Null(forwarding.Data!.Destination);
+        Assert.False(forwarding.Data.Verified);
+        handler.Respond = (request, _) =>
+        {
+            Assert.Equal(HttpMethod.Delete, request.Method);
+            return Task.FromResult(Response("", HttpStatusCode.NoContent));
+        };
+        await api.Projects.DeleteReportForwardingAsync("project/id");
+    }
+
+    [Fact]
+    public void MessagePagesKeepBothCurrentAndLegacyCursorFields()
+    {
+        var current = JsonSerializer.Deserialize<MessageIndexResponse>("{\"data\":[],\"links\":[],\"meta\":{\"path\":\"/messages\",\"per_page\":1,\"next_cursor\":null,\"next_cursor_url\":null,\"prev_cursor\":null,\"prev_cursor_url\":null}}", LettermintJson.Options)!;
+        Assert.Equal(1L, current.Meta!.PerPage);
+        var legacy = JsonSerializer.Deserialize<MessageIndexResponse>("{\"data\":[],\"path\":\"/messages\",\"per_page\":1,\"next_cursor\":null}", LettermintJson.Options)!;
+        Assert.Equal(1L, legacy.PerPage);
+    }
+
     private sealed class Handler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> Respond { get; set; }
