@@ -52,10 +52,9 @@ jobs:
         if: runner.os == 'Linux'
         with:
           python-version: '3.12'
-      - name: Check generated source
+      - name: Test generator and operation coverage
         if: runner.os == 'Linux'
         run: |
-          python tools/generate.py --check
           python -m unittest discover -s tools -p "test_*.py"
       - name: Test .NET 8 and 10
         run: dotnet test tests/Lettermint.Tests/Lettermint.Tests.csproj -c Release -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true

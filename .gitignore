@@ -6,3 +6,6 @@ __pycache__/
 *.user
 .env
 .DS_Store
+*-openapi.json
+*-openapi.yaml
+*-openapi.yml

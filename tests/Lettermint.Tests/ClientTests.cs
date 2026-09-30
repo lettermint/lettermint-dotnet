@@ -40,83 +40,77 @@ public class ClientTests
     }
 
     [Fact]
-    public async Task EverySpecOperationHasATypedMethodAndCorrectWireMapping()
+    public async Task EveryManifestOperationHasATypedMethodAndCorrectWireMapping()
     {
         var methods = typeof(ApiClient).Assembly.GetTypes().SelectMany(t => t.GetMethods())
             .Where(m => m.GetCustomAttribute<ApiOperationAttribute>() != null)
             .ToDictionary(m => (m.GetCustomAttribute<ApiOperationAttribute>()!.Surface, m.GetCustomAttribute<ApiOperationAttribute>()!.OperationId));
-        int expectedCount = 0;
-        foreach (var surface in new[] { "sending", "team" })
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "specs", "operations.json")));
+        foreach (var operation in manifest.RootElement.EnumerateArray())
         {
-            using var spec = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "specs", surface + "-openapi.json")));
-            foreach (var path in spec.RootElement.GetProperty("paths").EnumerateObject())
-                foreach (var operation in path.Value.EnumerateObject())
+            string surface = operation.GetProperty("surface").GetString()!;
+            string id = operation.GetProperty("operationId").GetString()!;
+            Assert.True(methods.TryGetValue((surface, id), out var method), id);
+            var parameters = method!.GetParameters();
+            var args = new object?[parameters.Length];
+            string expectedPath = operation.GetProperty("path").GetString()!;
+            object? payload = null;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var p = parameters[i];
+                if (p.ParameterType == typeof(string))
                 {
-                    if (!new[] { "get", "post", "put", "patch", "delete" }.Contains(operation.Name)) continue;
-                    expectedCount++;
-                    string id = operation.Value.GetProperty("operationId").GetString()!;
-                    Assert.True(methods.TryGetValue((surface, id), out var method), id);
-                    var parameters = method!.GetParameters();
-                    var args = new object?[parameters.Length];
-                    string expectedPath = path.Name;
-                    object? payload = null;
-                    for (int i = 0; i < parameters.Length; i++)
-                    {
-                        var p = parameters[i];
-                        if (p.ParameterType == typeof(string))
-                        {
-                            args[i] = "id /?#é";
-                            expectedPath = expectedPath.Replace("{" + p.Name + "}", Uri.EscapeDataString((string)args[i]!));
-                        }
-                        else if (p.Name == "payload")
-                        {
-                            payload = Activator.CreateInstance(p.ParameterType);
-                            if (payload is ApiModel model)
-                                model.AdditionalProperties = new() { ["test_marker"] = JsonSerializer.SerializeToElement("payload") };
-                            if (payload is System.Collections.IList list)
-                                list.Add(Activator.CreateInstance(p.ParameterType.GetGenericArguments()[0]));
-                            args[i] = payload;
-                        }
-                        else if (p.ParameterType == typeof(RequestOptions))
-                            args[i] = new RequestOptions { Query = new Dictionary<string, string> { ["filter[search]"] = "a+b /" }, IdempotencyKey = "test-key" };
-                        else args[i] = CancellationToken.None;
-                    }
-                    var handler = new Handler();
-                    using var http = new HttpClient(handler);
-                    using var email = LettermintClient.Email("sending-secret", Options(http));
-                    using var api = LettermintClient.Api("api-secret", Options(http));
-                    var returnType = method.ReturnType.IsGenericType ? method.ReturnType.GetGenericArguments()[0] : null;
-                    Assert.NotEqual(typeof(object), returnType);
-                    Assert.NotEqual(typeof(JsonElement), returnType);
-                    string body = returnType == typeof(string) ? (id == "v1.ping" ? "  pong\n" : "  raw\r\nsource  ")
-                        : returnType == null ? "" : JsonSerializer.Serialize(Activator.CreateInstance(returnType), LettermintJson.Options);
-                    bool called = false;
-                    handler.Respond = async (request, _) =>
-                    {
-                        called = true;
-                        Assert.Equal(operation.Name.ToUpperInvariant(), request.Method.Method);
-                        Assert.Equal("/v1" + expectedPath, request.RequestUri!.AbsolutePath);
-                        Assert.Equal("?filter%5Bsearch%5D=a%2Bb%20%2F", request.RequestUri.Query);
-                        Assert.Equal("test-key", request.Headers.GetValues("Idempotency-Key").Single());
-                        Assert.Equal(surface == "sending", request.Headers.Contains("x-lettermint-token"));
-                        Assert.Equal(surface == "team", request.Headers.Contains("Authorization"));
-                        Assert.Equal(surface == "sending" ? "sending-secret" : "Bearer api-secret",
-                            request.Headers.GetValues(surface == "sending" ? "x-lettermint-token" : "Authorization").Single());
-                        if (payload != null)
-                            Assert.Equal(JsonSerializer.Serialize(payload, payload.GetType(), LettermintJson.Options), await request.Content!.ReadAsStringAsync());
-                        else Assert.Null(request.Content);
-                        return Response(body);
-                    };
-                    object target = method.DeclaringType == typeof(EmailClient) ? email : method.DeclaringType == typeof(ApiClient) ? api
-                        : typeof(ApiClient).GetProperties().Single(p => p.PropertyType == method.DeclaringType).GetValue(api)!;
-                    var task = (Task)method.Invoke(target, args)!;
-                    await task;
-                    Assert.True(called);
-                    if (returnType == typeof(string))
-                        Assert.Equal(id == "v1.ping" ? "pong" : body, task.GetType().GetProperty("Result")!.GetValue(task));
+                    args[i] = "id /?#é";
+                    expectedPath = expectedPath.Replace("{" + p.Name + "}", Uri.EscapeDataString((string)args[i]!));
                 }
+                else if (p.Name == "payload")
+                {
+                    payload = Activator.CreateInstance(p.ParameterType);
+                    if (payload is ApiModel model)
+                        model.AdditionalProperties = new() { ["test_marker"] = JsonSerializer.SerializeToElement("payload") };
+                    if (payload is System.Collections.IList list)
+                        list.Add(Activator.CreateInstance(p.ParameterType.GetGenericArguments()[0]));
+                    args[i] = payload;
+                }
+                else if (p.ParameterType == typeof(RequestOptions))
+                    args[i] = new RequestOptions { Query = new Dictionary<string, string> { ["filter[search]"] = "a+b /" }, IdempotencyKey = "test-key" };
+                else args[i] = CancellationToken.None;
+            }
+            var handler = new Handler();
+            using var http = new HttpClient(handler);
+            using var email = LettermintClient.Email("sending-secret", Options(http));
+            using var api = LettermintClient.Api("api-secret", Options(http));
+            var returnType = method.ReturnType.IsGenericType ? method.ReturnType.GetGenericArguments()[0] : null;
+            Assert.NotEqual(typeof(object), returnType);
+            Assert.NotEqual(typeof(JsonElement), returnType);
+            string body = returnType == typeof(string) ? (id == "v1.ping" ? "  pong\n" : "  raw\r\nsource  ")
+                : returnType == null ? "" : JsonSerializer.Serialize(Activator.CreateInstance(returnType), LettermintJson.Options);
+            bool called = false;
+            handler.Respond = async (request, _) =>
+            {
+                called = true;
+                Assert.Equal(operation.GetProperty("verb").GetString(), request.Method.Method);
+                Assert.Equal("/v1" + expectedPath, request.RequestUri!.AbsolutePath);
+                Assert.Equal("?filter%5Bsearch%5D=a%2Bb%20%2F", request.RequestUri.Query);
+                Assert.Equal("test-key", request.Headers.GetValues("Idempotency-Key").Single());
+                Assert.Equal(surface == "sending", request.Headers.Contains("x-lettermint-token"));
+                Assert.Equal(surface == "team", request.Headers.Contains("Authorization"));
+                Assert.Equal(surface == "sending" ? "sending-secret" : "Bearer api-secret",
+                    request.Headers.GetValues(surface == "sending" ? "x-lettermint-token" : "Authorization").Single());
+                if (payload != null)
+                    Assert.Equal(JsonSerializer.Serialize(payload, payload.GetType(), LettermintJson.Options), await request.Content!.ReadAsStringAsync());
+                else Assert.Null(request.Content);
+                return Response(body);
+            };
+            object target = method.DeclaringType == typeof(EmailClient) ? email : method.DeclaringType == typeof(ApiClient) ? api
+                : typeof(ApiClient).GetProperties().Single(p => p.PropertyType == method.DeclaringType).GetValue(api)!;
+            var task = (Task)method.Invoke(target, args)!;
+            await task;
+            Assert.True(called);
+            if (returnType == typeof(string))
+                Assert.Equal(id == "v1.ping" ? "pong" : body, task.GetType().GetProperty("Result")!.GetValue(task));
         }
-        Assert.Equal(expectedCount, methods.Count);
+        Assert.Equal(manifest.RootElement.GetArrayLength(), methods.Count);
     }
 
     [Fact]

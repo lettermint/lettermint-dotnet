@@ -190,16 +190,27 @@ dotnet test tests/Lettermint.Tests/Lettermint.Tests.csproj
 Install the .NET 10 SDK and Python 3.10 or later.
 
 ```sh
-python3 tools/generate.py
-python3 tools/generate.py --check
+python3 tools/generate.py --spec-dir /path/to/api-repository/docs/api-reference
+python3 tools/generate.py --check --spec-dir /path/to/api-repository/docs/api-reference
 python3 -m unittest discover -s tools -p 'test_*.py'
 dotnet test tests/Lettermint.Tests/Lettermint.Tests.csproj
 dotnet pack src/Lettermint/Lettermint.csproj -c Release -o artifacts
 ```
 
-The two specification files in `specs` are independent inputs. To update them,
-copy the current sending and full API specifications into that directory and
-regenerate. The generator fails on unsupported schema unions.
+The generator reads `sending-openapi.json` and `team-openapi.json` from the
+external directory given by `--spec-dir`. Do not copy source specifications
+into this repository. Generated models, endpoints, and the operation manifest
+remain in the repository. The generator fails on unsupported schema unions.
+
+Normal tests use small test inputs, the operation manifest, and API fixtures.
+They do not require the source specifications. To run the full external
+contract tests, set `LETTERMINT_SPEC_DIR`:
+
+```sh
+LETTERMINT_SPEC_DIR=/path/to/api-repository/docs/api-reference python3 -m unittest discover -s tools -p 'test_*.py'
+```
+
+CI runs the normal tests. Run the external checks before an API contract update.
 
 ### API Contract Verification
 
@@ -219,7 +230,7 @@ The generator applies three corrections verified against the API code:
 - Message and event lists use flat Laravel cursor pages.
 
 It also combines all successful response variants, including HTTP 202 review
-responses. The raw specification snapshots remain unchanged for comparison.
+responses. The source specifications remain outside this repository.
 Source fingerprints are stored in `specs/api-source-verification.json`.
 
 To check for source changes:
