@@ -27,6 +27,27 @@ public sealed partial class EmailClient : IDisposable
         => (await Transport.RawAsync(HttpMethod.Get, $"/ping", null, options, cancellationToken).ConfigureAwait(false)).Trim();
 }
 
+public sealed partial class ApiClient : IDisposable
+{
+    internal Transport Transport { get; }
+    internal ApiClient(Transport transport) => Transport = transport;
+    public void Dispose() => Transport.Dispose();
+    [ApiOperation("team", "v1.analytics")]
+    public Task<V1AnalyticsResponse> AnalyticsAsync(V1AnalyticsRequest payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<V1AnalyticsResponse>(HttpMethod.Post, $"/analytics", payload, options, cancellationToken);
+
+    public Task<V1AnalyticsResponse> AnalyticsAsync(System.Text.Json.JsonElement payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<V1AnalyticsResponse>(HttpMethod.Post, $"/analytics", payload, options, cancellationToken);
+
+    [ApiOperation("team", "v1.ping")]
+    public async Task<string> PingAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => (await Transport.RawAsync(HttpMethod.Get, $"/ping", null, options, cancellationToken).ConfigureAwait(false)).Trim();
+
+    [ApiOperation("team", "v1.blockedFileTypes")]
+    public Task<V1BlockedFileTypesResponse> BlockedFileTypesAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<V1BlockedFileTypesResponse>(HttpMethod.Get, $"/blocked-file-types", null, options, cancellationToken);
+}
+
 public sealed partial class DomainsEndpoint
 {
     internal Transport Transport { get; }
@@ -64,20 +85,6 @@ public sealed partial class DomainsEndpoint
 
     public Task<DomainUpdateProjectsResponse> UpdateProjectsAsync(string domainId, System.Text.Json.JsonElement payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.SendAsync<DomainUpdateProjectsResponse>(HttpMethod.Put, $"/domains/{Transport.Segment(domainId)}/projects", payload, options, cancellationToken);
-}
-
-public sealed partial class ApiClient : IDisposable
-{
-    internal Transport Transport { get; }
-    internal ApiClient(Transport transport) => Transport = transport;
-    public void Dispose() => Transport.Dispose();
-    [ApiOperation("team", "v1.ping")]
-    public async Task<string> PingAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
-        => (await Transport.RawAsync(HttpMethod.Get, $"/ping", null, options, cancellationToken).ConfigureAwait(false)).Trim();
-
-    [ApiOperation("team", "v1.blockedFileTypes")]
-    public Task<V1BlockedFileTypesResponse> BlockedFileTypesAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
-        => Transport.SendAsync<V1BlockedFileTypesResponse>(HttpMethod.Get, $"/blocked-file-types", null, options, cancellationToken);
 }
 
 public sealed partial class MessagesEndpoint
@@ -128,6 +135,32 @@ public sealed partial class ProjectsEndpoint
 {
     internal Transport Transport { get; }
     internal ProjectsEndpoint(Transport transport) => Transport = transport;
+    [ApiOperation("team", "getReportForwarding")]
+    public Task<GetReportForwardingResponse> RetrieveReportForwardingAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<GetReportForwardingResponse>(HttpMethod.Get, $"/projects/{Transport.Segment(projectId)}/report-forwarding", null, options, cancellationToken);
+
+    [ApiOperation("team", "updateReportForwarding")]
+    public Task<UpdateReportForwardingResponse> UpdateReportForwardingAsync(string projectId, ReportForwardingRequest payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<UpdateReportForwardingResponse>(HttpMethod.Put, $"/projects/{Transport.Segment(projectId)}/report-forwarding", payload, options, cancellationToken);
+
+    public Task<UpdateReportForwardingResponse> UpdateReportForwardingAsync(string projectId, System.Text.Json.JsonElement payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<UpdateReportForwardingResponse>(HttpMethod.Put, $"/projects/{Transport.Segment(projectId)}/report-forwarding", payload, options, cancellationToken);
+
+    [ApiOperation("team", "deleteReportForwarding")]
+    public Task DeleteReportForwardingAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync(HttpMethod.Delete, $"/projects/{Transport.Segment(projectId)}/report-forwarding", null, options, cancellationToken);
+
+    [ApiOperation("team", "verifyReportForwarding")]
+    public Task<VerifyReportForwardingResponse> VerifyReportForwardingAsync(string projectId, VerifyReportForwardingRequest payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<VerifyReportForwardingResponse>(HttpMethod.Post, $"/projects/{Transport.Segment(projectId)}/report-forwarding/verify", payload, options, cancellationToken);
+
+    public Task<VerifyReportForwardingResponse> VerifyReportForwardingAsync(string projectId, System.Text.Json.JsonElement payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<VerifyReportForwardingResponse>(HttpMethod.Post, $"/projects/{Transport.Segment(projectId)}/report-forwarding/verify", payload, options, cancellationToken);
+
+    [ApiOperation("team", "resendReportForwardingCode")]
+    public Task<ResendReportForwardingCodeResponse> ResendReportForwardingCodeAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.SendAsync<ResendReportForwardingCodeResponse>(HttpMethod.Post, $"/projects/{Transport.Segment(projectId)}/report-forwarding/resend-code", null, options, cancellationToken);
+
     [ApiOperation("team", "project.index")]
     public Task<ProjectIndexResponse> ListAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.SendAsync<ProjectIndexResponse>(HttpMethod.Get, $"/projects", null, options, cancellationToken);

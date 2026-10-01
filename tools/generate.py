@@ -21,19 +21,29 @@ class Generator:
             for payload in [schemas['SendMailRequest'], schemas['SendBatchMailRequest']['items']]:
                 for field in ['headers', 'metadata']:
                     payload['properties'][field] = {'type': 'object', 'additionalProperties': {'type': 'string'}}
+            # Keep the existing sending response status enum property.
+            responses = self.specs['sending']['paths'].get('/send', {}).get('post', {}).get('responses', {})
+            for response in responses.values():
+                schema = response.get('content', {}).get('application/json', {}).get('schema', {})
+                for variant in schema.get('anyOf', [schema]):
+                    if 'status' in variant.get('properties', {}):
+                        variant['properties']['status'] = {'$ref': '#/components/schemas/MessageStatus'}
         # RouteData.php declares a serialized AttachmentDelivery enum value.
         if 'team' in self.specs:
             settings = self.specs['team']['components']['schemas'].get('RouteData', {}).get('properties', {}).get('settings', {})
             if 'attachment_delivery' in settings.get('properties', {}):
                 settings['properties']['attachment_delivery'] = {'$ref': '#/components/schemas/AttachmentDelivery'}
-        # MessageController returns a Laravel CursorPaginator through Data::collect.
-        # Scramble's CursorPaginatedDataCollection annotation describes a different envelope.
+        # Keep the legacy flat cursor fields and the current envelope metadata.
         if 'team' in self.specs:
             team = self.specs['team']
             page_template = team['paths']['/domains']['get']['responses']['200']['content']['application/json']['schema']
             for path, model in [('/messages', 'MessageListData'), ('/messages/{messageId}/events', 'MessageEventData')]:
                 page = copy.deepcopy(page_template)
                 page['properties']['data']['items'] = {'$ref': '#/components/schemas/' + model}
+                current = team['paths'][path]['get']['responses']['200']['content']['application/json']['schema']
+                for field in ['links', 'meta']:
+                    if field in current.get('properties', {}):
+                        page['properties'][field] = copy.deepcopy(current['properties'][field])
                 team['paths'][path]['get']['responses']['200']['content']['application/json']['schema'] = page
         specs = self.specs
         self.schemas = {}
@@ -144,6 +154,11 @@ class Generator:
                         'rescheduleMessage': ('message', 'reschedule'),
                         'cancelScheduledMessage': ('message', 'cancel'),
                         'processInboundMessage': ('message', 'process'),
+                        'getReportForwarding': ('project', 'retrieveReportForwarding'),
+                        'updateReportForwarding': ('project', 'updateReportForwarding'),
+                        'deleteReportForwarding': ('project', 'deleteReportForwarding'),
+                        'verifyReportForwarding': ('project', 'verifyReportForwarding'),
+                        'resendReportForwardingCode': ('project', 'resendReportForwardingCode'),
                     }[operation]
                     group = 'EmailClient' if surface == 'sending' else ('ApiClient' if prefix == 'v1' else name({'domain':'domains','message':'messages','project':'projects','route':'routes','suppression':'suppressions','webhook':'webhooks'}.get(prefix,prefix)) + 'Endpoint')
                     method = mapping.get(action, name(action))
@@ -163,6 +178,9 @@ class Generator:
                     variants = [v for v in variants if v]
                     if len(variants) > 1:
                         res_schema = {'anyOf': variants}
+                    # Keep the existing response name for project creation.
+                    if operation == 'project.store':
+                        res_schema = self.schemas['ProjectCreatedData']
                     typ = 'string' if raw else (self.type(res_schema, {'v1.sendMail':'SendEmailResponse','v1.sendBatchMail':'SendBatchEmailResponse'}.get(operation,name(operation)+'Response')) if res_schema else None)
                     route = re.sub(r'\{([^}]+)\}', r'{Transport.Segment(\1)}', path)
                     call = f'Transport.{"RawAsync" if raw else "SendAsync" + ("<"+typ+">" if typ else "")}(HttpMethod.{name(verb)}, $"{route}", {"payload" if payload else "null"}, options, cancellationToken)'

@@ -47,7 +47,7 @@ class ExternalContractTests(unittest.TestCase):
         generated = json.loads(self.generator.generate()['specs/operations.json'])
         actual = {(r['verb'], r['path']) for r in generated}
         self.assertEqual(actual, expected)
-        self.assertEqual(len(expected), 52)
+        self.assertEqual(len(expected), 58)
 
     def test_all_success_response_variants_are_typed(self):
         models = self.generator.generate()['src/Lettermint/Models.g.cs']

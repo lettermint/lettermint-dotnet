@@ -5,6 +5,19 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace Lettermint.Models;
 
+public sealed class AnalyticsResponseData : ApiModel
+{
+    [JsonPropertyName("data")]
+    public Dictionary<string, JsonElement>? Data { get; set; }
+
+    [JsonPropertyName("meta")]
+    public Dictionary<string, JsonElement>? Meta { get; set; }
+
+    [JsonPropertyName("pagination")]
+    public List<string>? Pagination { get; set; }
+
+}
+
 [JsonConverter(typeof(WireEnumConverter<AttachmentDelivery>))]
 public enum AttachmentDelivery
 {
@@ -277,6 +290,13 @@ public sealed class DomainVerifySpecificDnsRecordResponse : ApiModel
 
 }
 
+public sealed class GetReportForwardingResponse : ApiModel
+{
+    [JsonPropertyName("data")]
+    public ReportForwardingResource? Data { get; set; }
+
+}
+
 [JsonConverter(typeof(WireEnumConverter<InitialRoutes>))]
 public enum InitialRoutes
 {
@@ -314,6 +334,12 @@ public sealed class MessageData : ApiModel
 
     [JsonPropertyName("status")]
     public MessageStatus? Status { get; set; }
+
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
 
     [JsonPropertyName("status_changed_at")]
     public string? StatusChangedAt { get; set; }
@@ -365,12 +391,6 @@ public sealed class MessageData : ApiModel
 
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
-
-    [JsonPropertyName("delivery_mode")]
-    public DeliveryMode? DeliveryMode { get; set; }
-
-    [JsonPropertyName("sandbox_result")]
-    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -492,6 +512,34 @@ public sealed class MessageEventsResponse : ApiModel
     [JsonPropertyName("prev_page_url")]
     public string? PrevPageUrl { get; set; }
 
+    [JsonPropertyName("links")]
+    public List<string>? Links { get; set; }
+
+    [JsonPropertyName("meta")]
+    public MessageEventsResponseMeta? Meta { get; set; }
+
+}
+
+public sealed class MessageEventsResponseMeta : ApiModel
+{
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("per_page")]
+    public long? PerPage { get; set; }
+
+    [JsonPropertyName("next_cursor")]
+    public string? NextCursor { get; set; }
+
+    [JsonPropertyName("next_cursor_url")]
+    public string? NextCursorUrl { get; set; }
+
+    [JsonPropertyName("prev_cursor")]
+    public string? PrevCursor { get; set; }
+
+    [JsonPropertyName("prev_cursor_url")]
+    public string? PrevCursorUrl { get; set; }
+
 }
 
 public sealed class MessageIndexResponse : ApiModel
@@ -517,6 +565,34 @@ public sealed class MessageIndexResponse : ApiModel
     [JsonPropertyName("prev_page_url")]
     public string? PrevPageUrl { get; set; }
 
+    [JsonPropertyName("links")]
+    public List<string>? Links { get; set; }
+
+    [JsonPropertyName("meta")]
+    public MessageIndexResponseMeta? Meta { get; set; }
+
+}
+
+public sealed class MessageIndexResponseMeta : ApiModel
+{
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("per_page")]
+    public long? PerPage { get; set; }
+
+    [JsonPropertyName("next_cursor")]
+    public string? NextCursor { get; set; }
+
+    [JsonPropertyName("next_cursor_url")]
+    public string? NextCursorUrl { get; set; }
+
+    [JsonPropertyName("prev_cursor")]
+    public string? PrevCursor { get; set; }
+
+    [JsonPropertyName("prev_cursor_url")]
+    public string? PrevCursorUrl { get; set; }
+
 }
 
 public sealed class MessageListData : ApiModel
@@ -529,6 +605,12 @@ public sealed class MessageListData : ApiModel
 
     [JsonPropertyName("status")]
     public MessageStatus? Status { get; set; }
+
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
 
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
@@ -568,12 +650,6 @@ public sealed class MessageListData : ApiModel
 
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
-
-    [JsonPropertyName("delivery_mode")]
-    public DeliveryMode? DeliveryMode { get; set; }
-
-    [JsonPropertyName("sandbox_result")]
-    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -706,6 +782,19 @@ public enum ProjectAccessScope
     Selected,
 }
 
+public sealed class ProjectCreatedData : ApiModel
+{
+    [JsonPropertyName("data")]
+    public ProjectData? Data { get; set; }
+
+    [JsonPropertyName("message")]
+    public string? Message { get; set; }
+
+    [JsonPropertyName("api_token")]
+    public string? ApiToken { get; set; }
+
+}
+
 public sealed class ProjectData : ApiModel
 {
     [JsonPropertyName("id")]
@@ -713,6 +802,9 @@ public sealed class ProjectData : ApiModel
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
 
     [JsonPropertyName("smtp_enabled")]
     public bool? SmtpEnabled { get; set; }
@@ -752,9 +844,6 @@ public sealed class ProjectData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
-
-    [JsonPropertyName("delivery_mode")]
-    public DeliveryMode? DeliveryMode { get; set; }
 
 }
 
@@ -797,6 +886,9 @@ public sealed class ProjectListData : ApiModel
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
 
     [JsonPropertyName("smtp_enabled")]
     public bool? SmtpEnabled { get; set; }
@@ -940,6 +1032,8 @@ public enum RbacPermission
     WebhooksRotateSecret,
     [EnumMember(Value = "stats:read")]
     StatsRead,
+    [EnumMember(Value = "analytics:read")]
+    AnalyticsRead,
     [EnumMember(Value = "messages:read")]
     MessagesRead,
     [EnumMember(Value = "messages:read_content")]
@@ -965,6 +1059,26 @@ public enum RecordType
     MX,
 }
 
+public sealed class ReportForwardingRequest : ApiModel
+{
+    [JsonPropertyName("destination")]
+    public string? Destination { get; set; }
+
+}
+
+public sealed class ReportForwardingResource : ApiModel
+{
+    [JsonPropertyName("destination")]
+    public string? Destination { get; set; }
+
+    [JsonPropertyName("verified")]
+    public bool? Verified { get; set; }
+
+    [JsonPropertyName("verified_at")]
+    public string? VerifiedAt { get; set; }
+
+}
+
 public sealed class RescheduleMessageRequest : ApiModel
 {
     [JsonPropertyName("scheduled_at")]
@@ -982,6 +1096,13 @@ public sealed class RescheduleMessageResponse : ApiModel
 
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
+
+}
+
+public sealed class ResendReportForwardingCodeResponse : ApiModel
+{
+    [JsonPropertyName("data")]
+    public ReportForwardingResource? Data { get; set; }
 
 }
 
@@ -1306,6 +1427,9 @@ public sealed class SendBatchMailRequestItem : ApiModel
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
 
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
     [JsonPropertyName("headers")]
     public Dictionary<string, string>? Headers { get; set; }
 
@@ -1329,9 +1453,6 @@ public sealed class SendBatchMailRequestItem : ApiModel
 
     [JsonPropertyName("attachments")]
     public List<SendBatchMailRequestItemAttachmentsItem>? Attachments { get; set; }
-
-    [JsonPropertyName("sandbox_result")]
-    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -1382,14 +1503,14 @@ public sealed class SendEmailResponse : ApiModel
     [JsonPropertyName("status")]
     public MessageStatus? Status { get; set; }
 
-    [JsonPropertyName("scheduled_at")]
-    public string? ScheduledAt { get; set; }
-
     [JsonPropertyName("sandbox")]
     public bool? Sandbox { get; set; }
 
     [JsonPropertyName("sandbox_result")]
     public SandboxResult? SandboxResult { get; set; }
+
+    [JsonPropertyName("scheduled_at")]
+    public string? ScheduledAt { get; set; }
 
 }
 
@@ -1419,6 +1540,9 @@ public sealed class SendMailRequest : ApiModel
     [JsonPropertyName("scheduled_at")]
     public string? ScheduledAt { get; set; }
 
+    [JsonPropertyName("sandbox_result")]
+    public SandboxResult? SandboxResult { get; set; }
+
     [JsonPropertyName("headers")]
     public Dictionary<string, string>? Headers { get; set; }
 
@@ -1442,9 +1566,6 @@ public sealed class SendMailRequest : ApiModel
 
     [JsonPropertyName("attachments")]
     public List<SendMailRequestAttachmentsItem>? Attachments { get; set; }
-
-    [JsonPropertyName("sandbox_result")]
-    public SandboxResult? SandboxResult { get; set; }
 
 }
 
@@ -1671,14 +1792,17 @@ public sealed class StoreProjectData : ApiModel
     [JsonPropertyName("smtp_enabled")]
     public bool? SmtpEnabled { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
     [JsonPropertyName("initial_routes")]
     public InitialRoutes? InitialRoutes { get; set; }
 
     [JsonPropertyName("short_token")]
     public bool? ShortToken { get; set; }
 
-    [JsonPropertyName("delivery_mode")]
-    public DeliveryMode? DeliveryMode { get; set; }
+    [JsonPropertyName("redact_email_content")]
+    public bool? RedactEmailContent { get; set; }
 
 }
 
@@ -1692,6 +1816,21 @@ public sealed class StoreRouteData : ApiModel
 
     [JsonPropertyName("slug")]
     public string? Slug { get; set; }
+
+    [JsonPropertyName("settings")]
+    public UpdateRouteSettingsData? Settings { get; set; }
+
+    [JsonPropertyName("inbound_settings")]
+    public UpdateRouteInboundSettingsData? InboundSettings { get; set; }
+
+    [JsonPropertyName("inbound_domain")]
+    public string? InboundDomain { get; set; }
+
+    [JsonPropertyName("inbound_spam_threshold")]
+    public double? InboundSpamThreshold { get; set; }
+
+    [JsonPropertyName("attachment_delivery")]
+    public AttachmentDelivery? AttachmentDelivery { get; set; }
 
 }
 
@@ -1737,6 +1876,9 @@ public sealed class StoreWebhookData : ApiModel
     [JsonPropertyName("include_machine_events")]
     public bool? IncludeMachineEvents { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
     [JsonPropertyName("scope")]
     public WebhookScope? Scope { get; set; }
 
@@ -1748,9 +1890,6 @@ public sealed class StoreWebhookData : ApiModel
 
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
-
-    [JsonPropertyName("delivery_mode_filter")]
-    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 
@@ -2140,11 +2279,18 @@ public sealed class UpdateProjectData : ApiModel
     [JsonPropertyName("redact_email_content")]
     public bool? RedactEmailContent { get; set; }
 
+    [JsonPropertyName("delivery_mode")]
+    public DeliveryMode? DeliveryMode { get; set; }
+
     [JsonPropertyName("default_route_id")]
     public string? DefaultRouteId { get; set; }
 
-    [JsonPropertyName("delivery_mode")]
-    public DeliveryMode? DeliveryMode { get; set; }
+}
+
+public sealed class UpdateReportForwardingResponse : ApiModel
+{
+    [JsonPropertyName("data")]
+    public ReportForwardingResource? Data { get; set; }
 
 }
 
@@ -2158,6 +2304,15 @@ public sealed class UpdateRouteData : ApiModel
 
     [JsonPropertyName("inbound_settings")]
     public UpdateRouteInboundSettingsData? InboundSettings { get; set; }
+
+    [JsonPropertyName("inbound_domain")]
+    public string? InboundDomain { get; set; }
+
+    [JsonPropertyName("inbound_spam_threshold")]
+    public double? InboundSpamThreshold { get; set; }
+
+    [JsonPropertyName("attachment_delivery")]
+    public AttachmentDelivery? AttachmentDelivery { get; set; }
 
 }
 
@@ -2246,6 +2401,9 @@ public sealed class UpdateWebhookData : ApiModel
     [JsonPropertyName("include_machine_events")]
     public bool? IncludeMachineEvents { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
     [JsonPropertyName("scope")]
     public WebhookScope? Scope { get; set; }
 
@@ -2258,8 +2416,3125 @@ public sealed class UpdateWebhookData : ApiModel
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
 
-    [JsonPropertyName("delivery_mode_filter")]
-    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+}
+
+public sealed class V1AnalyticsRequest : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public List<V1AnalyticsRequestMetricsItem>? Metrics { get; set; }
+
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string? To { get; set; }
+
+    [JsonPropertyName("timezone")]
+    public string? Timezone { get; set; }
+
+    [JsonPropertyName("include")]
+    public List<V1AnalyticsRequestIncludeItem>? Include { get; set; }
+
+    [JsonPropertyName("group_by")]
+    public List<string>? GroupBy { get; set; }
+
+    [JsonPropertyName("filters")]
+    public List<V1AnalyticsRequestFiltersItem>? Filters { get; set; }
+
+    [JsonPropertyName("interval")]
+    public V1AnalyticsRequestInterval? Interval { get; set; }
+
+    [JsonPropertyName("compare")]
+    public V1AnalyticsRequestCompare? Compare { get; set; }
+
+    [JsonPropertyName("include_trend")]
+    public bool? IncludeTrend { get; set; }
+
+    [JsonPropertyName("sort")]
+    public V1AnalyticsRequestSort? Sort { get; set; }
+
+    [JsonPropertyName("limit")]
+    public long? Limit { get; set; }
+
+    [JsonPropertyName("cursor")]
+    public string? Cursor { get; set; }
+
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestCompare>))]
+public enum V1AnalyticsRequestCompare
+{
+    [EnumMember(Value = "previous_period")]
+    PreviousPeriod,
+}
+
+public sealed class V1AnalyticsRequestFiltersItem : ApiModel
+{
+    [JsonPropertyName("dimension")]
+    public string? Dimension { get; set; }
+
+    [JsonPropertyName("operator")]
+    public V1AnalyticsRequestFiltersItemOperator? Operator { get; set; }
+
+    [JsonPropertyName("values")]
+    public List<string>? Values { get; set; }
+
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestFiltersItemOperator>))]
+public enum V1AnalyticsRequestFiltersItemOperator
+{
+    [EnumMember(Value = "eq")]
+    Eq,
+    [EnumMember(Value = "in")]
+    In,
+    [EnumMember(Value = "not_in")]
+    NotIn,
+    [EnumMember(Value = "is_null")]
+    IsNull,
+    [EnumMember(Value = "is_not_null")]
+    IsNotNull,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestIncludeItem>))]
+public enum V1AnalyticsRequestIncludeItem
+{
+    [EnumMember(Value = "summary")]
+    Summary,
+    [EnumMember(Value = "time_series")]
+    TimeSeries,
+    [EnumMember(Value = "breakdown")]
+    Breakdown,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestInterval>))]
+public enum V1AnalyticsRequestInterval
+{
+    [EnumMember(Value = "hour")]
+    Hour,
+    [EnumMember(Value = "day")]
+    Day,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestMetricsItem>))]
+public enum V1AnalyticsRequestMetricsItem
+{
+    [EnumMember(Value = "accepted")]
+    Accepted,
+    [EnumMember(Value = "processed")]
+    Processed,
+    [EnumMember(Value = "suppressed")]
+    Suppressed,
+    [EnumMember(Value = "policy_rejected")]
+    PolicyRejected,
+    [EnumMember(Value = "application_failed")]
+    ApplicationFailed,
+    [EnumMember(Value = "mta_accepted")]
+    MtaAccepted,
+    [EnumMember(Value = "canceled")]
+    Canceled,
+    [EnumMember(Value = "messages")]
+    Messages,
+    [EnumMember(Value = "delivered")]
+    Delivered,
+    [EnumMember(Value = "bounced")]
+    Bounced,
+    [EnumMember(Value = "soft_bounced")]
+    SoftBounced,
+    [EnumMember(Value = "administratively_bounced")]
+    AdministrativelyBounced,
+    [EnumMember(Value = "deferred_recipients")]
+    DeferredRecipients,
+    [EnumMember(Value = "deferred_events")]
+    DeferredEvents,
+    [EnumMember(Value = "delivery_attempts")]
+    DeliveryAttempts,
+    [EnumMember(Value = "attempted_recipients")]
+    AttemptedRecipients,
+    [EnumMember(Value = "transport_outcome_recipients")]
+    TransportOutcomeRecipients,
+    [EnumMember(Value = "effective_delivered")]
+    EffectiveDelivered,
+    [EnumMember(Value = "open_tracked_delivered")]
+    OpenTrackedDelivered,
+    [EnumMember(Value = "click_tracked_delivered")]
+    ClickTrackedDelivered,
+    [EnumMember(Value = "out_of_band_bounced_recipients")]
+    OutOfBandBouncedRecipients,
+    [EnumMember(Value = "out_of_band_bounce_events")]
+    OutOfBandBounceEvents,
+    [EnumMember(Value = "complained")]
+    Complained,
+    [EnumMember(Value = "unsubscribed")]
+    Unsubscribed,
+    [EnumMember(Value = "human_opens")]
+    HumanOpens,
+    [EnumMember(Value = "human_opens_events")]
+    HumanOpensEvents,
+    [EnumMember(Value = "human_clicks")]
+    HumanClicks,
+    [EnumMember(Value = "human_clicks_events")]
+    HumanClicksEvents,
+    [EnumMember(Value = "machine_opens")]
+    MachineOpens,
+    [EnumMember(Value = "machine_opens_events")]
+    MachineOpensEvents,
+    [EnumMember(Value = "machine_clicks")]
+    MachineClicks,
+    [EnumMember(Value = "machine_clicks_events")]
+    MachineClicksEvents,
+    [EnumMember(Value = "privacy_opens")]
+    PrivacyOpens,
+    [EnumMember(Value = "privacy_opens_events")]
+    PrivacyOpensEvents,
+    [EnumMember(Value = "privacy_clicks")]
+    PrivacyClicks,
+    [EnumMember(Value = "privacy_clicks_events")]
+    PrivacyClicksEvents,
+    [EnumMember(Value = "bot_opens")]
+    BotOpens,
+    [EnumMember(Value = "bot_opens_events")]
+    BotOpensEvents,
+    [EnumMember(Value = "bot_clicks")]
+    BotClicks,
+    [EnumMember(Value = "bot_clicks_events")]
+    BotClicksEvents,
+    [EnumMember(Value = "scanner_opens")]
+    ScannerOpens,
+    [EnumMember(Value = "scanner_opens_events")]
+    ScannerOpensEvents,
+    [EnumMember(Value = "scanner_clicks")]
+    ScannerClicks,
+    [EnumMember(Value = "scanner_clicks_events")]
+    ScannerClicksEvents,
+    [EnumMember(Value = "observed_opens")]
+    ObservedOpens,
+    [EnumMember(Value = "observed_opens_events")]
+    ObservedOpensEvents,
+    [EnumMember(Value = "observed_clicks")]
+    ObservedClicks,
+    [EnumMember(Value = "observed_clicks_events")]
+    ObservedClicksEvents,
+    [EnumMember(Value = "delivery_rate")]
+    DeliveryRate,
+    [EnumMember(Value = "effective_delivery_rate")]
+    EffectiveDeliveryRate,
+    [EnumMember(Value = "bounce_rate")]
+    BounceRate,
+    [EnumMember(Value = "deferral_rate")]
+    DeferralRate,
+    [EnumMember(Value = "complaint_rate")]
+    ComplaintRate,
+    [EnumMember(Value = "human_open_rate")]
+    HumanOpenRate,
+    [EnumMember(Value = "human_click_rate")]
+    HumanClickRate,
+    [EnumMember(Value = "processing_latency_p50_ms")]
+    ProcessingLatencyP50Ms,
+    [EnumMember(Value = "processing_latency_p95_ms")]
+    ProcessingLatencyP95Ms,
+    [EnumMember(Value = "processing_latency_p99_ms")]
+    ProcessingLatencyP99Ms,
+    [EnumMember(Value = "processing_latency_samples")]
+    ProcessingLatencySamples,
+    [EnumMember(Value = "delivery_latency_p50_ms")]
+    DeliveryLatencyP50Ms,
+    [EnumMember(Value = "delivery_latency_p95_ms")]
+    DeliveryLatencyP95Ms,
+    [EnumMember(Value = "delivery_latency_p99_ms")]
+    DeliveryLatencyP99Ms,
+    [EnumMember(Value = "delivery_latency_samples")]
+    DeliveryLatencySamples,
+    [EnumMember(Value = "total_latency_p50_ms")]
+    TotalLatencyP50Ms,
+    [EnumMember(Value = "total_latency_p95_ms")]
+    TotalLatencyP95Ms,
+    [EnumMember(Value = "total_latency_p99_ms")]
+    TotalLatencyP99Ms,
+    [EnumMember(Value = "total_latency_samples")]
+    TotalLatencySamples,
+}
+
+public sealed class V1AnalyticsRequestSort : ApiModel
+{
+    [JsonPropertyName("metric")]
+    public V1AnalyticsRequestSortMetric? Metric { get; set; }
+
+    [JsonPropertyName("direction")]
+    public V1AnalyticsRequestSortDirection? Direction { get; set; }
+
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestSortDirection>))]
+public enum V1AnalyticsRequestSortDirection
+{
+    [EnumMember(Value = "asc")]
+    Asc,
+    [EnumMember(Value = "desc")]
+    Desc,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsRequestSortMetric>))]
+public enum V1AnalyticsRequestSortMetric
+{
+    [EnumMember(Value = "accepted")]
+    Accepted,
+    [EnumMember(Value = "processed")]
+    Processed,
+    [EnumMember(Value = "suppressed")]
+    Suppressed,
+    [EnumMember(Value = "policy_rejected")]
+    PolicyRejected,
+    [EnumMember(Value = "application_failed")]
+    ApplicationFailed,
+    [EnumMember(Value = "mta_accepted")]
+    MtaAccepted,
+    [EnumMember(Value = "canceled")]
+    Canceled,
+    [EnumMember(Value = "messages")]
+    Messages,
+    [EnumMember(Value = "delivered")]
+    Delivered,
+    [EnumMember(Value = "bounced")]
+    Bounced,
+    [EnumMember(Value = "soft_bounced")]
+    SoftBounced,
+    [EnumMember(Value = "administratively_bounced")]
+    AdministrativelyBounced,
+    [EnumMember(Value = "deferred_recipients")]
+    DeferredRecipients,
+    [EnumMember(Value = "deferred_events")]
+    DeferredEvents,
+    [EnumMember(Value = "delivery_attempts")]
+    DeliveryAttempts,
+    [EnumMember(Value = "attempted_recipients")]
+    AttemptedRecipients,
+    [EnumMember(Value = "transport_outcome_recipients")]
+    TransportOutcomeRecipients,
+    [EnumMember(Value = "effective_delivered")]
+    EffectiveDelivered,
+    [EnumMember(Value = "open_tracked_delivered")]
+    OpenTrackedDelivered,
+    [EnumMember(Value = "click_tracked_delivered")]
+    ClickTrackedDelivered,
+    [EnumMember(Value = "out_of_band_bounced_recipients")]
+    OutOfBandBouncedRecipients,
+    [EnumMember(Value = "out_of_band_bounce_events")]
+    OutOfBandBounceEvents,
+    [EnumMember(Value = "complained")]
+    Complained,
+    [EnumMember(Value = "unsubscribed")]
+    Unsubscribed,
+    [EnumMember(Value = "human_opens")]
+    HumanOpens,
+    [EnumMember(Value = "human_opens_events")]
+    HumanOpensEvents,
+    [EnumMember(Value = "human_clicks")]
+    HumanClicks,
+    [EnumMember(Value = "human_clicks_events")]
+    HumanClicksEvents,
+    [EnumMember(Value = "machine_opens")]
+    MachineOpens,
+    [EnumMember(Value = "machine_opens_events")]
+    MachineOpensEvents,
+    [EnumMember(Value = "machine_clicks")]
+    MachineClicks,
+    [EnumMember(Value = "machine_clicks_events")]
+    MachineClicksEvents,
+    [EnumMember(Value = "privacy_opens")]
+    PrivacyOpens,
+    [EnumMember(Value = "privacy_opens_events")]
+    PrivacyOpensEvents,
+    [EnumMember(Value = "privacy_clicks")]
+    PrivacyClicks,
+    [EnumMember(Value = "privacy_clicks_events")]
+    PrivacyClicksEvents,
+    [EnumMember(Value = "bot_opens")]
+    BotOpens,
+    [EnumMember(Value = "bot_opens_events")]
+    BotOpensEvents,
+    [EnumMember(Value = "bot_clicks")]
+    BotClicks,
+    [EnumMember(Value = "bot_clicks_events")]
+    BotClicksEvents,
+    [EnumMember(Value = "scanner_opens")]
+    ScannerOpens,
+    [EnumMember(Value = "scanner_opens_events")]
+    ScannerOpensEvents,
+    [EnumMember(Value = "scanner_clicks")]
+    ScannerClicks,
+    [EnumMember(Value = "scanner_clicks_events")]
+    ScannerClicksEvents,
+    [EnumMember(Value = "observed_opens")]
+    ObservedOpens,
+    [EnumMember(Value = "observed_opens_events")]
+    ObservedOpensEvents,
+    [EnumMember(Value = "observed_clicks")]
+    ObservedClicks,
+    [EnumMember(Value = "observed_clicks_events")]
+    ObservedClicksEvents,
+    [EnumMember(Value = "delivery_rate")]
+    DeliveryRate,
+    [EnumMember(Value = "effective_delivery_rate")]
+    EffectiveDeliveryRate,
+    [EnumMember(Value = "bounce_rate")]
+    BounceRate,
+    [EnumMember(Value = "deferral_rate")]
+    DeferralRate,
+    [EnumMember(Value = "complaint_rate")]
+    ComplaintRate,
+    [EnumMember(Value = "human_open_rate")]
+    HumanOpenRate,
+    [EnumMember(Value = "human_click_rate")]
+    HumanClickRate,
+    [EnumMember(Value = "processing_latency_p50_ms")]
+    ProcessingLatencyP50Ms,
+    [EnumMember(Value = "processing_latency_p95_ms")]
+    ProcessingLatencyP95Ms,
+    [EnumMember(Value = "processing_latency_p99_ms")]
+    ProcessingLatencyP99Ms,
+    [EnumMember(Value = "processing_latency_samples")]
+    ProcessingLatencySamples,
+    [EnumMember(Value = "delivery_latency_p50_ms")]
+    DeliveryLatencyP50Ms,
+    [EnumMember(Value = "delivery_latency_p95_ms")]
+    DeliveryLatencyP95Ms,
+    [EnumMember(Value = "delivery_latency_p99_ms")]
+    DeliveryLatencyP99Ms,
+    [EnumMember(Value = "delivery_latency_samples")]
+    DeliveryLatencySamples,
+    [EnumMember(Value = "total_latency_p50_ms")]
+    TotalLatencyP50Ms,
+    [EnumMember(Value = "total_latency_p95_ms")]
+    TotalLatencyP95Ms,
+    [EnumMember(Value = "total_latency_p99_ms")]
+    TotalLatencyP99Ms,
+    [EnumMember(Value = "total_latency_samples")]
+    TotalLatencySamples,
+}
+
+public sealed class V1AnalyticsResponse : ApiModel
+{
+    [JsonPropertyName("data")]
+    public V1AnalyticsResponseData? Data { get; set; }
+
+    [JsonPropertyName("meta")]
+    public V1AnalyticsResponseMeta? Meta { get; set; }
+
+    [JsonPropertyName("pagination")]
+    public V1AnalyticsResponsePagination? Pagination { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseData : ApiModel
+{
+    [JsonPropertyName("summary")]
+    public V1AnalyticsResponseDataSummary? Summary { get; set; }
+
+    [JsonPropertyName("time_series")]
+    public List<V1AnalyticsResponseDataTimeSeriesItem>? TimeSeries { get; set; }
+
+    [JsonPropertyName("breakdown")]
+    public List<V1AnalyticsResponseDataBreakdownItem>? Breakdown { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItem : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataBreakdownItemMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataBreakdownItemRateBases? RateBases { get; set; }
+
+    [JsonPropertyName("previous")]
+    public V1AnalyticsResponseDataBreakdownItemPrevious? Previous { get; set; }
+
+    [JsonPropertyName("change")]
+    public Dictionary<string, V1AnalyticsResponseDataBreakdownItemChangeValue>? Change { get; set; }
+
+    [JsonPropertyName("dimensions")]
+    public Dictionary<string, string>? Dimensions { get; set; }
+
+    [JsonPropertyName("trend")]
+    public List<V1AnalyticsResponseDataBreakdownItemTrendItem>? Trend { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemChangeValue : ApiModel
+{
+    [JsonPropertyName("absolute")]
+    public double? Absolute { get; set; }
+
+    [JsonPropertyName("relative")]
+    public double? Relative { get; set; }
+
+    [JsonPropertyName("percentage_points")]
+    public double? PercentagePoints { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPrevious : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBases? RateBases { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataBreakdownItemPreviousRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemPreviousRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataBreakdownItemRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItem : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBases? RateBases { get; set; }
+
+    [JsonPropertyName("previous")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPrevious? Previous { get; set; }
+
+    [JsonPropertyName("change")]
+    public Dictionary<string, V1AnalyticsResponseDataBreakdownItemTrendItemChangeValue>? Change { get; set; }
+
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string? To { get; set; }
+
+    [JsonPropertyName("available")]
+    public bool? Available { get; set; }
+
+    [JsonPropertyName("partial")]
+    public bool? Partial { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemChangeValue : ApiModel
+{
+    [JsonPropertyName("absolute")]
+    public double? Absolute { get; set; }
+
+    [JsonPropertyName("relative")]
+    public double? Relative { get; set; }
+
+    [JsonPropertyName("percentage_points")]
+    public double? PercentagePoints { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPrevious : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBases? RateBases { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemPreviousRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataBreakdownItemTrendItemRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummary : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataSummaryMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataSummaryRateBases? RateBases { get; set; }
+
+    [JsonPropertyName("previous")]
+    public V1AnalyticsResponseDataSummaryPrevious? Previous { get; set; }
+
+    [JsonPropertyName("change")]
+    public Dictionary<string, V1AnalyticsResponseDataSummaryChangeValue>? Change { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryChangeValue : ApiModel
+{
+    [JsonPropertyName("absolute")]
+    public double? Absolute { get; set; }
+
+    [JsonPropertyName("relative")]
+    public double? Relative { get; set; }
+
+    [JsonPropertyName("percentage_points")]
+    public double? PercentagePoints { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPrevious : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataSummaryPreviousMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBases? RateBases { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataSummaryPreviousRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryPreviousRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataSummaryRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataSummaryRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItem : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataTimeSeriesItemMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBases? RateBases { get; set; }
+
+    [JsonPropertyName("previous")]
+    public V1AnalyticsResponseDataTimeSeriesItemPrevious? Previous { get; set; }
+
+    [JsonPropertyName("change")]
+    public Dictionary<string, V1AnalyticsResponseDataTimeSeriesItemChangeValue>? Change { get; set; }
+
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string? To { get; set; }
+
+    [JsonPropertyName("available")]
+    public bool? Available { get; set; }
+
+    [JsonPropertyName("partial")]
+    public bool? Partial { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemChangeValue : ApiModel
+{
+    [JsonPropertyName("absolute")]
+    public double? Absolute { get; set; }
+
+    [JsonPropertyName("relative")]
+    public double? Relative { get; set; }
+
+    [JsonPropertyName("percentage_points")]
+    public double? PercentagePoints { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPrevious : ApiModel
+{
+    [JsonPropertyName("metrics")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousMetrics? Metrics { get; set; }
+
+    [JsonPropertyName("rate_bases")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBases? RateBases { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousMetrics : ApiModel
+{
+    [JsonPropertyName("accepted")]
+    public long? Accepted { get; set; }
+
+    [JsonPropertyName("processed")]
+    public long? Processed { get; set; }
+
+    [JsonPropertyName("suppressed")]
+    public long? Suppressed { get; set; }
+
+    [JsonPropertyName("policy_rejected")]
+    public long? PolicyRejected { get; set; }
+
+    [JsonPropertyName("application_failed")]
+    public long? ApplicationFailed { get; set; }
+
+    [JsonPropertyName("mta_accepted")]
+    public long? MtaAccepted { get; set; }
+
+    [JsonPropertyName("canceled")]
+    public long? Canceled { get; set; }
+
+    [JsonPropertyName("messages")]
+    public long? Messages { get; set; }
+
+    [JsonPropertyName("delivered")]
+    public long? Delivered { get; set; }
+
+    [JsonPropertyName("bounced")]
+    public long? Bounced { get; set; }
+
+    [JsonPropertyName("soft_bounced")]
+    public long? SoftBounced { get; set; }
+
+    [JsonPropertyName("administratively_bounced")]
+    public long? AdministrativelyBounced { get; set; }
+
+    [JsonPropertyName("deferred_recipients")]
+    public long? DeferredRecipients { get; set; }
+
+    [JsonPropertyName("deferred_events")]
+    public long? DeferredEvents { get; set; }
+
+    [JsonPropertyName("delivery_attempts")]
+    public long? DeliveryAttempts { get; set; }
+
+    [JsonPropertyName("attempted_recipients")]
+    public long? AttemptedRecipients { get; set; }
+
+    [JsonPropertyName("transport_outcome_recipients")]
+    public long? TransportOutcomeRecipients { get; set; }
+
+    [JsonPropertyName("effective_delivered")]
+    public long? EffectiveDelivered { get; set; }
+
+    [JsonPropertyName("open_tracked_delivered")]
+    public long? OpenTrackedDelivered { get; set; }
+
+    [JsonPropertyName("click_tracked_delivered")]
+    public long? ClickTrackedDelivered { get; set; }
+
+    [JsonPropertyName("out_of_band_bounced_recipients")]
+    public long? OutOfBandBouncedRecipients { get; set; }
+
+    [JsonPropertyName("out_of_band_bounce_events")]
+    public long? OutOfBandBounceEvents { get; set; }
+
+    [JsonPropertyName("complained")]
+    public long? Complained { get; set; }
+
+    [JsonPropertyName("unsubscribed")]
+    public long? Unsubscribed { get; set; }
+
+    [JsonPropertyName("human_opens")]
+    public long? HumanOpens { get; set; }
+
+    [JsonPropertyName("human_opens_events")]
+    public long? HumanOpensEvents { get; set; }
+
+    [JsonPropertyName("human_clicks")]
+    public long? HumanClicks { get; set; }
+
+    [JsonPropertyName("human_clicks_events")]
+    public long? HumanClicksEvents { get; set; }
+
+    [JsonPropertyName("machine_opens")]
+    public long? MachineOpens { get; set; }
+
+    [JsonPropertyName("machine_opens_events")]
+    public long? MachineOpensEvents { get; set; }
+
+    [JsonPropertyName("machine_clicks")]
+    public long? MachineClicks { get; set; }
+
+    [JsonPropertyName("machine_clicks_events")]
+    public long? MachineClicksEvents { get; set; }
+
+    [JsonPropertyName("privacy_opens")]
+    public long? PrivacyOpens { get; set; }
+
+    [JsonPropertyName("privacy_opens_events")]
+    public long? PrivacyOpensEvents { get; set; }
+
+    [JsonPropertyName("privacy_clicks")]
+    public long? PrivacyClicks { get; set; }
+
+    [JsonPropertyName("privacy_clicks_events")]
+    public long? PrivacyClicksEvents { get; set; }
+
+    [JsonPropertyName("bot_opens")]
+    public long? BotOpens { get; set; }
+
+    [JsonPropertyName("bot_opens_events")]
+    public long? BotOpensEvents { get; set; }
+
+    [JsonPropertyName("bot_clicks")]
+    public long? BotClicks { get; set; }
+
+    [JsonPropertyName("bot_clicks_events")]
+    public long? BotClicksEvents { get; set; }
+
+    [JsonPropertyName("scanner_opens")]
+    public long? ScannerOpens { get; set; }
+
+    [JsonPropertyName("scanner_opens_events")]
+    public long? ScannerOpensEvents { get; set; }
+
+    [JsonPropertyName("scanner_clicks")]
+    public long? ScannerClicks { get; set; }
+
+    [JsonPropertyName("scanner_clicks_events")]
+    public long? ScannerClicksEvents { get; set; }
+
+    [JsonPropertyName("observed_opens")]
+    public long? ObservedOpens { get; set; }
+
+    [JsonPropertyName("observed_opens_events")]
+    public long? ObservedOpensEvents { get; set; }
+
+    [JsonPropertyName("observed_clicks")]
+    public long? ObservedClicks { get; set; }
+
+    [JsonPropertyName("observed_clicks_events")]
+    public long? ObservedClicksEvents { get; set; }
+
+    [JsonPropertyName("delivery_rate")]
+    public double? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public double? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public double? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public double? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public double? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public double? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public double? HumanClickRate { get; set; }
+
+    [JsonPropertyName("processing_latency_p50_ms")]
+    public double? ProcessingLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p95_ms")]
+    public double? ProcessingLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_p99_ms")]
+    public double? ProcessingLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("processing_latency_samples")]
+    public long? ProcessingLatencySamples { get; set; }
+
+    [JsonPropertyName("delivery_latency_p50_ms")]
+    public double? DeliveryLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p95_ms")]
+    public double? DeliveryLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_p99_ms")]
+    public double? DeliveryLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("delivery_latency_samples")]
+    public long? DeliveryLatencySamples { get; set; }
+
+    [JsonPropertyName("total_latency_p50_ms")]
+    public double? TotalLatencyP50Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p95_ms")]
+    public double? TotalLatencyP95Ms { get; set; }
+
+    [JsonPropertyName("total_latency_p99_ms")]
+    public double? TotalLatencyP99Ms { get; set; }
+
+    [JsonPropertyName("total_latency_samples")]
+    public long? TotalLatencySamples { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemPreviousRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBases : ApiModel
+{
+    [JsonPropertyName("delivery_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesDeliveryRate? DeliveryRate { get; set; }
+
+    [JsonPropertyName("effective_delivery_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesEffectiveDeliveryRate? EffectiveDeliveryRate { get; set; }
+
+    [JsonPropertyName("bounce_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesBounceRate? BounceRate { get; set; }
+
+    [JsonPropertyName("deferral_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesDeferralRate? DeferralRate { get; set; }
+
+    [JsonPropertyName("complaint_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesComplaintRate? ComplaintRate { get; set; }
+
+    [JsonPropertyName("human_open_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesHumanOpenRate? HumanOpenRate { get; set; }
+
+    [JsonPropertyName("human_click_rate")]
+    public V1AnalyticsResponseDataTimeSeriesItemRateBasesHumanClickRate? HumanClickRate { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesBounceRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesComplaintRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesDeferralRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesEffectiveDeliveryRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesHumanClickRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseDataTimeSeriesItemRateBasesHumanOpenRate : ApiModel
+{
+    [JsonPropertyName("numerator")]
+    public long? Numerator { get; set; }
+
+    [JsonPropertyName("denominator")]
+    public long? Denominator { get; set; }
+
+}
+
+public sealed class V1AnalyticsResponseMeta : ApiModel
+{
+    [JsonPropertyName("time_basis")]
+    public V1AnalyticsResponseMetaTimeBasis? TimeBasis { get; set; }
+
+    [JsonPropertyName("timezone")]
+    public string? Timezone { get; set; }
+
+    [JsonPropertyName("interval")]
+    public V1AnalyticsResponseMetaInterval? Interval { get; set; }
+
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string? To { get; set; }
+
+    [JsonPropertyName("effective_to")]
+    public string? EffectiveTo { get; set; }
+
+    [JsonPropertyName("alignment")]
+    public V1AnalyticsResponseMetaAlignment? Alignment { get; set; }
+
+    [JsonPropertyName("generated_at")]
+    public string? GeneratedAt { get; set; }
+
+    [JsonPropertyName("available_since")]
+    public string? AvailableSince { get; set; }
+
+    [JsonPropertyName("partial")]
+    public bool? Partial { get; set; }
+
+    [JsonPropertyName("ongoing")]
+    public bool? Ongoing { get; set; }
+
+    [JsonPropertyName("collection_completeness")]
+    public V1AnalyticsResponseMetaCollectionCompleteness? CollectionCompleteness { get; set; }
+
+    [JsonPropertyName("last_ingested_at")]
+    public string? LastIngestedAt { get; set; }
+
+    [JsonPropertyName("metric_definition_version")]
+    public string? MetricDefinitionVersion { get; set; }
+
+    [JsonPropertyName("ranked_group_limit")]
+    public long? RankedGroupLimit { get; set; }
+
+    [JsonPropertyName("comparison")]
+    public V1AnalyticsResponseMetaComparison? Comparison { get; set; }
+
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsResponseMetaAlignment>))]
+public enum V1AnalyticsResponseMetaAlignment
+{
+    [EnumMember(Value = "hour")]
+    Hour,
+    [EnumMember(Value = "day")]
+    Day,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsResponseMetaCollectionCompleteness>))]
+public enum V1AnalyticsResponseMetaCollectionCompleteness
+{
+    [EnumMember(Value = "best_effort")]
+    BestEffort,
+}
+
+public sealed class V1AnalyticsResponseMetaComparison : ApiModel
+{
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string? To { get; set; }
+
+    [JsonPropertyName("partial")]
+    public bool? Partial { get; set; }
+
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsResponseMetaInterval>))]
+public enum V1AnalyticsResponseMetaInterval
+{
+    [EnumMember(Value = "hour")]
+    Hour,
+    [EnumMember(Value = "day")]
+    Day,
+}
+
+[JsonConverter(typeof(WireEnumConverter<V1AnalyticsResponseMetaTimeBasis>))]
+public enum V1AnalyticsResponseMetaTimeBasis
+{
+    [EnumMember(Value = "event")]
+    Event,
+}
+
+public sealed class V1AnalyticsResponsePagination : ApiModel
+{
+    [JsonPropertyName("total_groups")]
+    public long? TotalGroups { get; set; }
+
+    [JsonPropertyName("returned_groups")]
+    public long? ReturnedGroups { get; set; }
+
+    [JsonPropertyName("next_cursor")]
+    public string? NextCursor { get; set; }
+
+    [JsonPropertyName("truncated")]
+    public bool? Truncated { get; set; }
 
 }
 
@@ -2270,6 +5545,20 @@ public sealed class V1BlockedFileTypesResponse : ApiModel
 
     [JsonPropertyName("mime_types")]
     public List<string>? MimeTypes { get; set; }
+
+}
+
+public sealed class VerifyReportForwardingRequest : ApiModel
+{
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+
+}
+
+public sealed class VerifyReportForwardingResponse : ApiModel
+{
+    [JsonPropertyName("data")]
+    public ReportForwardingResource? Data { get; set; }
 
 }
 
@@ -2305,6 +5594,9 @@ public sealed class WebhookData : ApiModel
     [JsonPropertyName("include_machine_events")]
     public bool? IncludeMachineEvents { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
     [JsonPropertyName("last_called_at")]
     public string? LastCalledAt { get; set; }
 
@@ -2313,9 +5605,6 @@ public sealed class WebhookData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
-
-    [JsonPropertyName("delivery_mode_filter")]
-    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 
@@ -2367,6 +5656,9 @@ public sealed class WebhookDeliveryData : ApiModel
     [JsonPropertyName("status")]
     public WebhookDeliveryStatus? Status { get; set; }
 
+    [JsonPropertyName("sandbox")]
+    public bool? Sandbox { get; set; }
+
     [JsonPropertyName("attempt_number")]
     public long? AttemptNumber { get; set; }
 
@@ -2394,9 +5686,6 @@ public sealed class WebhookDeliveryData : ApiModel
     [JsonPropertyName("timestamp")]
     public string? Timestamp { get; set; }
 
-    [JsonPropertyName("sandbox")]
-    public bool? Sandbox { get; set; }
-
 }
 
 public sealed class WebhookDeliveryListData : ApiModel
@@ -2421,6 +5710,9 @@ public sealed class WebhookDeliveryListData : ApiModel
 
     [JsonPropertyName("status")]
     public WebhookDeliveryStatus? Status { get; set; }
+
+    [JsonPropertyName("sandbox")]
+    public bool? Sandbox { get; set; }
 
     [JsonPropertyName("attempt_number")]
     public long? AttemptNumber { get; set; }
@@ -2575,6 +5867,9 @@ public sealed class WebhookListData : ApiModel
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
     [JsonPropertyName("last_called_at")]
     public string? LastCalledAt { get; set; }
 
@@ -2639,6 +5934,9 @@ public sealed class WebhookSecretData : ApiModel
     [JsonPropertyName("include_machine_events")]
     public bool? IncludeMachineEvents { get; set; }
 
+    [JsonPropertyName("delivery_mode_filter")]
+    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
+
     [JsonPropertyName("secret")]
     public string? Secret { get; set; }
 
@@ -2650,9 +5948,6 @@ public sealed class WebhookSecretData : ApiModel
 
     [JsonPropertyName("updated_at")]
     public string? UpdatedAt { get; set; }
-
-    [JsonPropertyName("delivery_mode_filter")]
-    public WebhookDeliveryModeFilter? DeliveryModeFilter { get; set; }
 
 }
 
