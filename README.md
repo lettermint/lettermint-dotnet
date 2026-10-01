@@ -215,8 +215,8 @@ CI runs the normal tests. Run the external checks before an API contract update.
 ### API Contract Verification
 
 The SDK was checked against API source revision
-`4caab44611b345b1457093a51abbddc5f4be2ccb` on 2026-09-07. The checks cover
-52 public API-key routes. OAuth-only identity, connection, and listener routes
+`cc20d3a24c8e1fdfc18dc3ced7a49071505dfba4` on 2026-10-01. The checks cover
+58 public API-key routes. OAuth-only identity, connection, and listener routes
 are outside this SDK's scope. No live API requests were made.
 
 The tests use synthetic fixtures exported through the actual Laravel data
@@ -231,7 +231,8 @@ The generator applies three corrections verified against the API code:
 
 It also combines all successful response variants, including HTTP 202 review
 responses. The source specifications remain outside this repository.
-Source fingerprints are stored in `specs/api-source-verification.json`.
+Public specification, split script, and synthetic fixture hashes are stored
+in `specs/api-source-verification.json`. The record has no private file list.
 
 To check for source changes:
 
@@ -239,11 +240,12 @@ To check for source changes:
 python3 tools/verify_api_source.py /path/to/api-repository
 ```
 
-To reproduce the fixtures, use the API repository with its installed PHP
-dependencies. Write to a temporary file first and check that it contains JSON:
+To reproduce the fixtures, use a private fixture exporter with the API
+repository and its installed PHP dependencies. Keep that exporter outside
+this SDK. Write to a temporary file first and check that it contains JSON:
 
 ```sh
-php tools/export_api_fixtures.php /path/to/api-repository/laravel > /tmp/api-source.json
+php /path/to/private-fixture-exporter.php /path/to/api-repository/laravel /path/to/fresh-specifications > /tmp/api-source.json
 python3 -m json.tool /tmp/api-source.json > /dev/null
 ```
 

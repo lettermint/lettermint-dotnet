@@ -1129,6 +1129,9 @@ public sealed class RouteData : ApiModel
     [JsonPropertyName("inbound_address")]
     public string? InboundAddress { get; set; }
 
+    [JsonPropertyName("inbound_route_domain")]
+    public string? InboundRouteDomain { get; set; }
+
     [JsonPropertyName("inbound_mx_hostname")]
     public string? InboundMxHostname { get; set; }
 
