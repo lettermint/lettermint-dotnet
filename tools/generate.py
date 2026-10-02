@@ -133,8 +133,16 @@ class Generator:
                 field = name(prop)
                 if field == key:
                     field += 'Value'
-                # Null means omitted. A raw JSON payload can send explicit null.
-                lines += [f'    [JsonPropertyName({json.dumps(prop)})]', f'    public {typ}? {field} {{ get; set; }}', '']
+                if prop == 'basic_auth' and key in ['StoreWebhookData', 'UpdateWebhookData']:
+                    lines += ['    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]',
+                              f'    [JsonPropertyName({json.dumps(prop)})]',
+                              '    public OptionalNullable<WebhookBasicAuthData> BasicAuth { get; set; }', '']
+                elif prop == 'has_basic_auth':
+                    lines += [f'    [JsonPropertyName({json.dumps(prop)})]', f'    public bool {field} {{ get; set; }}', '']
+                elif key == 'WebhookBasicAuthData':
+                    lines += [f'    [JsonPropertyName({json.dumps(prop)})]', f'    public required string {field} {{ get; set; }}', '']
+                else:
+                    lines += [f'    [JsonPropertyName({json.dumps(prop)})]', f'    public {typ}? {field} {{ get; set; }}', '']
         lines += ['}', '']
         self.definitions[key] = '\n'.join(lines)
 
