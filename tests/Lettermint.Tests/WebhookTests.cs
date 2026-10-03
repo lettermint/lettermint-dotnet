@@ -57,6 +57,23 @@ public class WebhookTests
         Verifier().Verify(Body, new List<KeyValuePair<string, IEnumerable<string>>> { new("x-lettermint-signature", [headers["X-Lettermint-Signature"]]), new("x-lettermint-delivery", [headers["X-Lettermint-Delivery"]]) });
     }
 
+    /// <summary>Like ASP.NET Core's StringValues: a struct that is a list of strings.</summary>
+    private readonly struct Values(params string[] values) : IEnumerable<string>
+    {
+        public IEnumerator<string> GetEnumerator() => ((IEnumerable<string>)values).GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Fact]
+    public void AcceptsHeaderDictionariesWithStringValuesLikeStructs()
+    {
+        var headers = Headers(Now).ToDictionary(p => p.Key, p => new Values(p.Value));
+        Verifier().Verify(Encoding.UTF8.GetBytes(Body), headers);
+        headers["X-Lettermint-Delivery"] = new Values(Now.ToString(), Now.ToString());
+        Assert.Equal(WebhookVerificationReason.DeliveryTimestampMismatch, Fails(() => Verifier().Verify(Body, headers)));
+    }
+
     [Fact]
     public void RequiresBothHeaders()
     {

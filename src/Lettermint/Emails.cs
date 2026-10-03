@@ -194,7 +194,7 @@ public sealed class EmailBuilder
 /// raw bytes (base64-encoded by the SDK) or base64 text.
 /// </summary>
 [DebuggerDisplay("{ToString(),nq}")]
-public sealed class EmailAttachment
+public sealed record EmailAttachment
 {
     private readonly string _base64;
 
