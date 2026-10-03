@@ -1894,6 +1894,10 @@ public sealed class StoreWebhookData : ApiModel
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonPropertyName("basic_auth")]
+    public OptionalNullable<WebhookBasicAuthData> BasicAuth { get; set; }
+
 }
 
 public sealed class SuppressedRecipientData : ApiModel
@@ -2418,6 +2422,10 @@ public sealed class UpdateWebhookData : ApiModel
 
     [JsonPropertyName("route_id")]
     public string? RouteId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonPropertyName("basic_auth")]
+    public OptionalNullable<WebhookBasicAuthData> BasicAuth { get; set; }
 
 }
 
@@ -5565,6 +5573,16 @@ public sealed class VerifyReportForwardingResponse : ApiModel
 
 }
 
+public sealed class WebhookBasicAuthData : ApiModel
+{
+    [JsonPropertyName("username")]
+    public required string Username { get; set; }
+
+    [JsonPropertyName("password")]
+    public required string Password { get; set; }
+
+}
+
 public sealed class WebhookData : ApiModel
 {
     [JsonPropertyName("id")]
@@ -5587,6 +5605,9 @@ public sealed class WebhookData : ApiModel
 
     [JsonPropertyName("url")]
     public string? Url { get; set; }
+
+    [JsonPropertyName("has_basic_auth")]
+    public bool HasBasicAuth { get; set; }
 
     [JsonPropertyName("events")]
     public List<string>? Events { get; set; }
@@ -5864,6 +5885,9 @@ public sealed class WebhookListData : ApiModel
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
+    [JsonPropertyName("has_basic_auth")]
+    public bool HasBasicAuth { get; set; }
+
     [JsonPropertyName("events")]
     public List<string>? Events { get; set; }
 
@@ -5927,6 +5951,9 @@ public sealed class WebhookSecretData : ApiModel
 
     [JsonPropertyName("url")]
     public string? Url { get; set; }
+
+    [JsonPropertyName("has_basic_auth")]
+    public bool HasBasicAuth { get; set; }
 
     [JsonPropertyName("events")]
     public List<string>? Events { get; set; }
