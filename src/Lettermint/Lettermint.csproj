@@ -3,14 +3,24 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RootNamespace>Lettermint</RootNamespace>
     <PackageId>Lettermint</PackageId>
-    <Version>0.1.0</Version>
+    <!-- The release workflow sets the version from the git tag (-p:Version=...). -->
+    <Version>2.0.0</Version>
     <Authors>Lettermint</Authors>
-    <Description>The Lettermint SDK for the sending and full APIs.</Description>
+    <Description>The official .NET SDK for the Lettermint sending and team APIs.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/lettermint/lettermint-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/lettermint/lettermint-dotnet</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>lettermint;email;transactional</PackageTags>
   </PropertyGroup>
-  <ItemGroup><None Include="../../README.md" Pack="true" PackagePath="/" /></ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../UPGRADE.md" Pack="true" PackagePath="/" />
+    <InternalsVisibleTo Include="Lettermint.Tests" />
+  </ItemGroup>
 </Project>

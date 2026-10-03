@@ -1,81 +1,143 @@
+using System.Diagnostics;
+using Lettermint.Internal;
 using Lettermint.Models;
 
 namespace Lettermint;
 
-public static class LettermintClient
+/// <summary>
+/// The Lettermint client.
+/// </summary>
+/// <remarks>
+/// <see cref="Emails"/> uses the sending token; every other part uses the team
+/// token. The client holds no message state and is safe to share across threads
+/// and requests: create it once (for example as a singleton) and reuse it.
+/// <code>
+/// var lettermint = new LettermintClient(new LettermintOptions { SendingToken = sending, TeamToken = team });
+/// var lettermint = new LettermintClient("lm_..."); // team or sending token, detected by prefix
+/// </code>
+/// </remarks>
+[DebuggerDisplay("{ToString(),nq}")]
+public sealed class LettermintClient : IDisposable
 {
-    public static EmailClient Email(string token, ClientOptions? options = null) => new(new Transport(token, true, options));
-    public static ApiClient Api(string token, ClientOptions? options = null) => new(new Transport(token, false, options));
-}
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private readonly Transport _transport;
 
-public sealed partial class EmailClient
-{
-    public Task<RescheduleMessageResponse> RescheduleAsync(string messageId, RescheduleMessageRequest payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
-        => Transport.SendAsync<RescheduleMessageResponse>(HttpMethod.Patch, $"/messages/{Transport.Segment(messageId)}", payload, options, cancellationToken);
-    public Task<CancelScheduledMessageResponse> CancelAsync(string messageId, RequestOptions? options = null, CancellationToken cancellationToken = default)
-        => Transport.SendAsync<CancelScheduledMessageResponse>(HttpMethod.Post, $"/messages/{Transport.Segment(messageId)}/cancel", null, options, cancellationToken);
-    public EmailBuilder Compose() => new(this);
-    public EmailBuilder From(string from) => Compose().From(from);
+    /// <summary>Creates a client from options. Pass at least one token.</summary>
+    /// <exception cref="LettermintConfigException">No token, an invalid token or an invalid option.</exception>
+    public LettermintClient(LettermintOptions options)
+    {
+        if (options is null)
+        {
+            throw new LettermintConfigException("Pass LettermintOptions with SendingToken, TeamToken or both.");
+        }
+        var sendingToken = Tokens.Check("SendingToken", options.SendingToken);
+        var teamToken = Tokens.Check("TeamToken", options.TeamToken);
+        if (sendingToken is null && teamToken is null)
+        {
+            throw new LettermintConfigException("Pass SendingToken, TeamToken or both in LettermintOptions.");
+        }
+        _transport = new Transport(
+            sendingToken,
+            teamToken,
+            Transport.CheckBaseUrl(options.BaseUrl),
+            Transport.CheckTimeout(options.Timeout),
+            options.HttpClient);
+        Emails = new Emails(_transport);
+        Domains = new Domains(_transport);
+        Messages = new Messages(_transport);
+        Projects = new Projects(_transport);
+        Routes = new Routes(_transport);
+        Stats = new Stats(_transport);
+        Suppressions = new Suppressions(_transport);
+        Team = new Team(_transport);
+        Webhooks = new Webhooks(_transport);
+    }
 
-    // Use the same email model for single and batch sends.
-    public Task<List<SendBatchEmailResponseItem>> SendBatchAsync(IEnumerable<SendMailRequest> payload, RequestOptions? options = null, CancellationToken cancellationToken = default)
-        => Transport.SendAsync<List<SendBatchEmailResponseItem>>(HttpMethod.Post, "/send/batch", payload, options, cancellationToken);
-}
+    /// <summary>
+    /// Creates a client from one token. <c>lm_team_…</c> followed by letters and digits
+    /// is a team token; any other <c>lm_…</c> token of letters and digits is a sending token.
+    /// </summary>
+    /// <param name="token">The token. Its type is detected by its format.</param>
+    /// <param name="options">Other options. Leave <see cref="LettermintOptions.SendingToken"/> and <see cref="LettermintOptions.TeamToken"/> unset.</param>
+    /// <exception cref="LettermintConfigException">The token format is not recognised (for example an SSO token), or the options also hold a token.</exception>
+    public LettermintClient(string token, LettermintOptions? options = null)
+        : this(WithToken(token, options))
+    {
+    }
 
-public sealed class EmailBuilder
-{
-    private readonly EmailClient client;
-    private readonly SendMailRequest payload = new();
-    private string? idempotencyKey;
-    internal EmailBuilder(EmailClient client) => this.client = client;
-    public EmailBuilder From(string value) { payload.From = value; return this; }
-    public EmailBuilder To(params string[] values) { payload.To = [.. values]; return this; }
-    public EmailBuilder Cc(params string[] values) { payload.Cc = [.. values]; return this; }
-    public EmailBuilder Bcc(params string[] values) { payload.Bcc = [.. values]; return this; }
-    public EmailBuilder ReplyTo(params string[] values) { payload.ReplyTo = [.. values]; return this; }
-    public EmailBuilder Subject(string value) { payload.Subject = value; return this; }
-    public EmailBuilder Html(string? value) { payload.Html = value; return this; }
-    public EmailBuilder Text(string? value) { payload.Text = value; return this; }
-    public EmailBuilder Route(string? value) { payload.Route = value; return this; }
-    public EmailBuilder ScheduledAt(string value) { payload.ScheduledAt = value; return this; }
-    public EmailBuilder Tags(params MessageTag[] values)
+    private static LettermintOptions WithToken(string token, LettermintOptions? options)
     {
-        ValidateTags(values.Select(value => (value.Name, value.Value)));
-        payload.Tags = [.. values.Select(value => new SendMailRequestTagsItem { Name = value.Name, Value = value.Value })];
-        return this;
+        var kind = Tokens.Detect(token);
+        options ??= new LettermintOptions();
+        if (options.SendingToken is not null || options.TeamToken is not null)
+        {
+            throw new LettermintConfigException("Pass the token either as the first argument or in LettermintOptions, not both.");
+        }
+        return new LettermintOptions
+        {
+            SendingToken = kind == TokenKind.Sending ? token : null,
+            TeamToken = kind == TokenKind.Team ? token : null,
+            BaseUrl = options.BaseUrl,
+            Timeout = options.Timeout,
+            HttpClient = options.HttpClient,
+        };
     }
-    public EmailBuilder Tags(params SendMailRequestTagsItem[] values)
-    {
-        ValidateTags(values.Select(value => (value.Name ?? "", value.Value ?? "")));
-        payload.Tags = [.. values];
-        return this;
-    }
-    public EmailBuilder Tag(string? value)
-    {
-        if (value is not null && payload.Tags?.Count >= 20) throw new ArgumentException("A legacy tag and no more than 19 message tags are permitted", nameof(value));
-        payload.Tag = value;
-        return this;
-    }
-    public EmailBuilder Headers(IReadOnlyDictionary<string, string> values) { payload.Headers = new(values); return this; }
-    public EmailBuilder Metadata(IReadOnlyDictionary<string, string> values) { payload.Metadata = new(values); return this; }
-    public EmailBuilder Settings(SendMailRequestSettings settings) { payload.Settings = settings; return this; }
-    public EmailBuilder SandboxResult(SandboxResult value) { payload.SandboxResult = value; return this; }
-    public EmailBuilder IdempotencyKey(string value) { idempotencyKey = value; return this; }
-    public EmailBuilder Attach(string filename, string content, string? contentId = null, string? contentType = null)
-    {
-        (payload.Attachments ??= []).Add(new() { Filename = filename, Content = content, ContentId = contentId, ContentType = contentType });
-        return this;
-    }
-    public Task<SendEmailResponse> SendAsync(CancellationToken cancellationToken = default)
-        => client.SendAsync(payload, new RequestOptions { IdempotencyKey = idempotencyKey }, cancellationToken);
 
-    private void ValidateTags(IEnumerable<(string Name, string Value)> values)
+    /// <summary>Send email. Needs the sending token.</summary>
+    public Emails Emails { get; }
+
+    /// <summary>Sending domains. Needs the team token.</summary>
+    public Domains Domains { get; }
+
+    /// <summary>Sent and received messages. Needs the team token.</summary>
+    public Messages Messages { get; }
+
+    /// <summary>Projects and their report forwarding. Needs the team token.</summary>
+    public Projects Projects { get; }
+
+    /// <summary>Routes of a project. Needs the team token.</summary>
+    public Routes Routes { get; }
+
+    /// <summary>Sending statistics. Needs the team token.</summary>
+    public Stats Stats { get; }
+
+    /// <summary>The suppression list. Needs the team token.</summary>
+    public Suppressions Suppressions { get; }
+
+    /// <summary>The team and its members. Needs the team token.</summary>
+    public Team Team { get; }
+
+    /// <summary>Webhook endpoints and their deliveries. Needs the team token.</summary>
+    public Webhooks Webhooks { get; }
+
+    /// <summary>The API base URL, without a trailing slash.</summary>
+    public string BaseUrl => _transport.BaseUrl;
+
+    /// <summary>The default request timeout.</summary>
+    public TimeSpan Timeout => _transport.Timeout;
+
+    /// <summary>
+    /// Checks the configured token: <c>GET /ping</c> returns <c>pong</c>. Uses the team
+    /// token when configured, otherwise the sending token.
+    /// </summary>
+    public async Task<string> PingAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
     {
-        var tags = values.ToList();
-        var maximum = payload.Tag is null ? 20 : 19;
-        if (tags.Count > maximum) throw new ArgumentException($"No more than {maximum} message tags are permitted", nameof(values));
-        foreach (var tag in tags) _ = new MessageTag(tag.Name, tag.Value);
-        if (tags.Select(tag => tag.Name).Distinct(StringComparer.Ordinal).Count() != tags.Count)
-            throw new ArgumentException("Message tag names must be unique and case-sensitive", nameof(values));
+        var text = await _transport.CallAsync(Operations.Ping, "PingAsync", [], default, default, options, cancellationToken).ConfigureAwait(false);
+        return text.Trim();
     }
+
+    /// <summary>Queries email analytics. Needs the team token.</summary>
+    public Task<AnalyticsResponse> AnalyticsAsync(AnalyticsQuery query, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => _transport.CallAsync(Operations.QueryAnalytics, "AnalyticsAsync", [], default, query, options, cancellationToken);
+
+    /// <summary>The file extensions and MIME types that cannot be attached. Needs the team token.</summary>
+    public Task<BlockedFileTypes> BlockedFileTypesAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => _transport.CallAsync(Operations.ListBlockedFileTypes, "BlockedFileTypesAsync", [], default, default, options, cancellationToken);
+
+    /// <summary>The configuration without credentials: tokens are shown as <c>[redacted]</c>.</summary>
+    public override string ToString() =>
+        $"LettermintClient {{ BaseUrl = {_transport.BaseUrl}, Timeout = {_transport.Timeout}, SendingToken = {(_transport.HasSendingToken ? Redaction.Redacted : "(not set)")}, TeamToken = {(_transport.HasTeamToken ? Redaction.Redacted : "(not set)")} }}";
+
+    /// <summary>Disposes the HttpClient the SDK created. A caller-supplied HttpClient is left alone.</summary>
+    public void Dispose() => _transport.Dispose();
 }
