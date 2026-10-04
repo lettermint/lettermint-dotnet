@@ -52,10 +52,10 @@ jobs:
         if: runner.os == 'Linux'
         with:
           python-version: '3.12'
-      - name: Test generator and operation coverage
+      # The generator is private, so CI only checks the headers of the generated files.
+      - name: Check generated files
         if: runner.os == 'Linux'
-        run: |
-          python -m unittest discover -s tools -p "test_*.py"
+        run: python scripts/generate.py --check
       - name: Test .NET 8 and 10
         run: dotnet test tests/Lettermint.Tests/Lettermint.Tests.csproj -c Release -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true
       - name: Pack tested build
