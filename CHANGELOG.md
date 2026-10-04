@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.0.1 - 2026-10-04
+
+This release fixes a flaky test that prevented the release of v2.0.0 - no changes.
+
+### What's Changed
+
+* test: use a new HttpListener for each loopback port attempt by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/16
+
+**Full Changelog**: https://github.com/lettermint/lettermint-dotnet/compare/v2.0.0...v2.0.1
+
 ## v1.2.0 - 2026-10-01
 
 ### What's Changed
