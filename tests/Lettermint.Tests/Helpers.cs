@@ -127,7 +127,7 @@ internal static class Fake
 /// <summary>A loopback HTTP server for tests that need the real default handler.</summary>
 internal sealed class LoopbackServer : IAsyncDisposable
 {
-    private readonly HttpListener _listener = new();
+    private readonly HttpListener _listener;
     private readonly Func<HttpListenerContext, Task> _handle;
     private readonly Task _loop;
 
@@ -138,15 +138,18 @@ internal sealed class LoopbackServer : IAsyncDisposable
         {
             var port = Random.Shared.Next(20000, 60000);
             Origin = $"http://127.0.0.1:{port}";
-            _listener.Prefixes.Clear();
-            _listener.Prefixes.Add(Origin + "/");
+            // On Windows a failed Start() disposes the listener, so every attempt needs a new one.
+            var listener = new HttpListener();
+            listener.Prefixes.Add(Origin + "/");
             try
             {
-                _listener.Start();
+                listener.Start();
+                _listener = listener;
                 break;
             }
             catch (HttpListenerException) when (attempt < 20)
             {
+                listener.Close();
             }
         }
         _loop = Task.Run(LoopAsync);
