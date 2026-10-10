@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Lettermint.Internal;
 using Lettermint.Models;
 
@@ -129,6 +130,37 @@ public sealed class LettermintClient : IDisposable
     /// <summary>Queries email analytics. Needs the team token.</summary>
     public Task<AnalyticsResponse> AnalyticsAsync(AnalyticsQuery query, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => _transport.CallAsync(Operations.QueryAnalytics, "AnalyticsAsync", [], default, query, options, cancellationToken);
+
+    /// <summary>
+    /// Queries email analytics and follows <c>pagination.next_cursor</c>, yielding one
+    /// whole response per request. Each response carries the next page of
+    /// <c>Data.Breakdown</c> with its own <c>Meta</c> and <c>Pagination</c>. Needs the team token.
+    /// </summary>
+    /// <remarks>
+    /// A cursor expires 60 seconds after its response, so request the next page
+    /// promptly; an expired cursor throws a <see cref="ValidationException"/>. The
+    /// query passed in is not changed.
+    /// </remarks>
+    public async IAsyncEnumerable<AnalyticsResponse> AnalyticsPagesAsync(AnalyticsQuery query, RequestOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        if (query.Cursor is { } start)
+        {
+            seen.Add(start);
+        }
+        var body = query;
+        while (true)
+        {
+            var page = await _transport.CallAsync(Operations.QueryAnalytics, "AnalyticsPagesAsync", [], default, body, options, cancellationToken).ConfigureAwait(false);
+            yield return page;
+            var next = page.Pagination?.NextCursor;
+            if (string.IsNullOrEmpty(next) || !seen.Add(next))
+            {
+                yield break;
+            }
+            body = query with { Cursor = next };
+        }
+    }
 
     /// <summary>The file extensions and MIME types that cannot be attached. Needs the team token.</summary>
     public Task<BlockedFileTypes> BlockedFileTypesAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)

@@ -155,9 +155,19 @@ public sealed class ServerException : LettermintApiException
 {
     /// <summary>Creates the exception.</summary>
     public ServerException(HttpStatusCode statusCode, string message, string? code = null, JsonElement? details = null, JsonElement? body = null)
-        : base(statusCode, message, code, details, body)
+        : this(statusCode, message, code, details, body, null)
     {
     }
+
+    /// <summary>Creates the exception with the wait from the <c>Retry-After</c> header.</summary>
+    public ServerException(HttpStatusCode statusCode, string message, string? code, JsonElement? details, JsonElement? body, TimeSpan? retryAfter)
+        : base(statusCode, message, code, details, body)
+    {
+        RetryAfter = retryAfter;
+    }
+
+    /// <summary>How long to wait, from the <c>Retry-After</c> header (seconds or an HTTP date), when the API sent one.</summary>
+    public TimeSpan? RetryAfter { get; }
 }
 
 /// <summary>
