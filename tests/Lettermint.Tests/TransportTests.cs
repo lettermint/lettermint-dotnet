@@ -114,6 +114,25 @@ public class TransportTests
     }
 
     [Fact]
+    public async Task ReadsRetryAfterFromA5xxResponse()
+    {
+        var (client, _) = Fake.Client((_, index) =>
+        {
+            var response = Fake.Json(index == 0 ? 503 : 500, new { message = index == 0 ? "Service Unavailable" : "Server Error" });
+            if (index == 0)
+            {
+                response.Headers.Add("Retry-After", "2");
+            }
+            return response;
+        });
+        var error = await Assert.ThrowsAsync<ServerException>(() => client.PingAsync());
+        Assert.Equal(TimeSpan.FromSeconds(2), error.RetryAfter);
+        var plain = await Assert.ThrowsAsync<ServerException>(() => client.PingAsync());
+        Assert.Null(plain.RetryAfter);
+        Assert.Null(new ServerException(HttpStatusCode.BadGateway, "Bad Gateway", "BAD_GATEWAY").RetryAfter);
+    }
+
+    [Fact]
     public async Task ReturnsNothingFor204AndRawStringsForTextEndpoints()
     {
         var source = "Received: from x\r\nSubject: Hi\r\n\r\nBody  \n";

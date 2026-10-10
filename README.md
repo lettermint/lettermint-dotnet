@@ -257,7 +257,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)` |
-| (root) | `PingAsync`, `AnalyticsAsync`, `BlockedFileTypesAsync` |
+| (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
 
 ### Query parameters and pagination
 
@@ -286,6 +286,55 @@ await foreach (var message in lettermint.Messages.IterateAsync(new ListMessagesQ
 
 Stop early with `break`. The SDK requests the next page only when you get to it, and it stops when the API repeats a cursor.
 
+### Analytics
+
+`lettermint.AnalyticsAsync(query)` runs one analytics query. `Metrics` is the only required field; by default the API returns a summary of the last 30 days:
+
+```csharp
+var result = await lettermint.AnalyticsAsync(new AnalyticsQuery
+{
+    Metrics = [AnalyticsMetric.Delivered, AnalyticsMetric.Bounced, AnalyticsMetric.DeliveryRate],
+    From = "2026-10-01",
+    To = "2026-10-31",
+    Timezone = "Europe/Amsterdam",
+});
+
+Console.WriteLine(result.Data.Summary?.Metrics.DeliveryRate); // 0.9836, or null when there is no data
+Console.WriteLine($"{result.Meta.Partial} {result.Meta.EffectiveTo}");
+```
+
+Add `Include` to ask for a `TimeSeries` or a `Breakdown`. A breakdown needs `GroupBy`, and the API returns its rows in pages of `Limit` (at most 200). `AnalyticsPagesAsync()` follows `Pagination.NextCursor` for you. It is an `IAsyncEnumerable<AnalyticsResponse>` that yields one whole response per request, so each page keeps its `Meta` and `Pagination`:
+
+```csharp
+var query = new AnalyticsQuery
+{
+    Metrics = [AnalyticsMetric.Delivered, AnalyticsMetric.Bounced],
+    Include = [AnalyticsSection.Breakdown],
+    GroupBy = [AnalyticsGroupDimension.RecipientDomain],
+    Sort = new AnalyticsSort { Metric = AnalyticsMetric.Bounced, Direction = AnalyticsSortDirection.Desc },
+    Limit = 200,
+};
+
+var rows = new List<AnalyticsBreakdownRow>();
+await foreach (var page in lettermint.AnalyticsPagesAsync(query))
+{
+    rows.AddRange(page.Data.Breakdown ?? []);
+    if (page.Pagination.Truncated)
+    {
+        Console.Error.WriteLine("More groups exist than the API ranks.");
+    }
+}
+```
+
+A cursor expires 60 seconds after its response, so read the next page promptly. An expired cursor throws a `ValidationException` with `Errors["cursor"]`; run the query again to start over.
+
+A few things to know when you read a response:
+
+- A metric is `null` when the API cannot measure it for that row or bucket, and a rate is `null` when its denominator is zero. `0` means a measured zero.
+- `Data.Summary`, `Data.TimeSeries` and `Data.Breakdown` are set only when `Include` asks for them. `Previous`, `Change` and `Meta.Comparison` are set only with `Compare`. Otherwise they are `null`.
+- `smtp_response_group` can be used in `GroupBy` but not as a filter dimension.
+- Analytics can answer `503` or `504` when a query takes too long or the service is busy. Both throw a `ServerException`; see [Errors](#errors).
+
 ### Cancellation and timeouts
 
 Every method takes `RequestOptions` (with a per-call `Timeout`) and a `CancellationToken` as its last two arguments:
@@ -310,7 +359,7 @@ Every exception the SDK throws extends `LettermintException`:
 | `ConflictException` | 409 | |
 | `ValidationException` | 422 | `Errors` (field errors) |
 | `RateLimitException` | 429 | `RetryAfter` (`TimeSpan?`) |
-| `ServerException` | 5xx | |
+| `ServerException` | 5xx | `RetryAfter` (`TimeSpan?`, when the API sent `Retry-After`) |
 | `LettermintTimeoutException` | No complete response within the timeout | `Timeout` |
 | `ConnectionException` | The request failed (DNS, TLS, refused, reset) | `InnerException` |
 | `UnexpectedResponseException` | An empty or non-JSON body where JSON was expected, or an error page such as a proxy's HTML 502 | `StatusCode`, `BodyExcerpt` |
