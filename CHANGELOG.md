@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.1.0 - 2026-10-11
+
+### What's Changed
+
+* feat: add AnalyticsPagesAsync, RetryAfter on server errors and the latest API types by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/17
+
+**Full Changelog**: https://github.com/lettermint/lettermint-dotnet/compare/v2.0.1...v2.1.0
+
 ## v2.0.1 - 2026-10-04
 
 This release fixes a flaky test that prevented the release of v2.0.0 - no changes.
