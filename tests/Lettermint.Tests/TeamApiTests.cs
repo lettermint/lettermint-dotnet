@@ -146,7 +146,7 @@ public class TeamApiTests
     {
         var layout = new Dictionary<Type, string[]>
         {
-            [typeof(LettermintClient)] = ["AnalyticsAsync", "BlockedFileTypesAsync", "PingAsync"],
+            [typeof(LettermintClient)] = ["AnalyticsAsync", "AnalyticsPagesAsync", "BlockedFileTypesAsync", "PingAsync"],
             [typeof(Emails)] = ["Compose", "PingAsync", "SendAsync", "SendBatchAsync"],
             [typeof(Domains)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateProjectsAsync", "VerifyDnsRecordAsync", "VerifyDnsRecordsAsync"],
             [typeof(Messages)] = ["CancelAsync", "EventsAsync", "HtmlAsync", "IterateAsync", "IterateEventsAsync", "ListAsync", "ProcessAsync", "RescheduleAsync", "RetrieveAsync", "SourceAsync", "TextAsync"],

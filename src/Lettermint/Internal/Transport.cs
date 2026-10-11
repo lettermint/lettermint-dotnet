@@ -377,7 +377,7 @@ internal sealed class Transport : IDisposable
             409 => new ConflictException(message, code, details, body),
             422 => new ValidationException(message, errors, code, details, body),
             429 => new RateLimitException(message, ParseRetryAfter(response), code, details, body),
-            >= 500 => new ServerException(response.StatusCode, message, code, details, body),
+            >= 500 => new ServerException(response.StatusCode, message, code, details, body, ParseRetryAfter(response)),
             _ => new LettermintApiException(response.StatusCode, message, code, details, body),
         };
     }
