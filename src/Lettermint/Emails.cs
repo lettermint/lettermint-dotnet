@@ -29,6 +29,11 @@ public sealed class Emails : ApiResource
     }
 
     /// <summary>Sends up to 500 emails in one request.</summary>
+    /// <remarks>
+    /// If an email fails mid-batch, the emails before it may already be accepted: the
+    /// <see cref="LettermintApiException.Details"/> of the error then lists them in
+    /// <c>accepted</c> (<c>index</c> and <c>message_id</c>).
+    /// </remarks>
     public Task<IReadOnlyList<SendMailResponse>> SendBatchAsync(IEnumerable<SendMailRequest> messages, IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default)
     {
         Transport.AssertAuth("Emails.SendBatchAsync", AuthSurface.Sending);
@@ -41,9 +46,45 @@ public sealed class Emails : ApiResource
         {
             MessageValidation.Validate(list[index], $"messages[{index}]");
         }
-        IReadOnlyList<SendBatchMailItem> items = list.ConvertAll(ToBatchItem);
-        return Transport.CallAsync(Operations.SendBatchMail, "Emails.SendBatchAsync", [], default, items, options, cancellationToken);
+        return SendItemsAsync(list.ConvertAll(message => ToBatchItem(message, null)), options, cancellationToken);
     }
+
+    /// <summary>
+    /// Sends up to 500 emails in one request, each with an optional per-email
+    /// <see cref="SendBatchMailItem.IdempotencyKey"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If an email with the same key and content was accepted in the last 24 hours, the
+    /// API returns its original result and does not send it again, also from a later
+    /// batch. Keys must be unique within a batch. Reusing a key with different content,
+    /// or while the email with that key is still being processed, rejects the whole batch
+    /// with a <see cref="ConflictException"/> and sends nothing.
+    /// </para>
+    /// <para>
+    /// The per-email keys are independent of the request-level <c>Idempotency-Key</c>
+    /// header in <paramref name="options"/>. If an email fails mid-batch, the emails before
+    /// it may already be accepted: the <see cref="LettermintApiException.Details"/> of the
+    /// error then lists them in <c>accepted</c> (<c>index</c> and <c>message_id</c>).
+    /// </para>
+    /// </remarks>
+    /// <param name="messages">The emails, in the API's format. <see cref="EmailBuilder.BuildBatchItem"/> creates one from a builder.</param>
+    /// <param name="options">The request-level idempotency key and timeout of this call.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public Task<IReadOnlyList<SendMailResponse>> SendBatchAsync(IEnumerable<SendBatchMailItem> messages, IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        Transport.AssertAuth("Emails.SendBatchAsync", AuthSurface.Sending);
+        if (messages is null)
+        {
+            throw new LettermintValidationException("SendBatchAsync takes a list of messages.", "messages");
+        }
+        var list = messages.ToList();
+        MessageValidation.Validate(list);
+        return SendItemsAsync(list, options, cancellationToken);
+    }
+
+    private Task<IReadOnlyList<SendMailResponse>> SendItemsAsync(IReadOnlyList<SendBatchMailItem> items, IdempotentRequestOptions? options, CancellationToken cancellationToken)
+        => Transport.CallAsync(Operations.SendBatchMail, "Emails.SendBatchAsync", [], default, items, options, cancellationToken);
 
     /// <summary>Sends up to 500 emails, built with <see cref="Compose()"/>, in one request.</summary>
     public Task<IReadOnlyList<SendMailResponse>> SendBatchAsync(IEnumerable<EmailBuilder> builders, IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default)
@@ -73,7 +114,7 @@ public sealed class Emails : ApiResource
         return new EmailBuilder(this, message);
     }
 
-    internal static SendBatchMailItem ToBatchItem(SendMailRequest message) => new()
+    internal static SendBatchMailItem ToBatchItem(SendMailRequest message, string? idempotencyKey) => new()
     {
         Route = message.Route,
         From = message.From,
@@ -92,6 +133,7 @@ public sealed class Emails : ApiResource
         Html = message.Html,
         Text = message.Text,
         Attachments = message.Attachments,
+        IdempotencyKey = idempotencyKey,
         AdditionalProperties = message.AdditionalProperties,
     };
 
@@ -204,6 +246,18 @@ public sealed class EmailBuilder
     /// <summary>Returns the message in the API's format.</summary>
     public SendMailRequest Build() => _message;
 
+    /// <summary>
+    /// Returns the message as an item for
+    /// <see cref="Emails.SendBatchAsync(IEnumerable{SendBatchMailItem}, IdempotentRequestOptions?, CancellationToken)"/>,
+    /// with an optional per-email idempotency key (1 to 255 characters, unique within the batch).
+    /// </summary>
+    /// <exception cref="LettermintValidationException">The key is empty or longer than 255 characters.</exception>
+    public SendBatchMailItem BuildBatchItem(string? idempotencyKey = null)
+    {
+        MessageValidation.ValidateIdempotencyKey(idempotencyKey, "idempotency_key");
+        return Emails.ToBatchItem(_message, idempotencyKey);
+    }
+
     /// <summary>Sends a snapshot of this email. The builder stays unchanged and can be sent again.</summary>
     public Task<SendMailResponse> SendAsync(IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default) =>
         _emails.SendAsync(_message, options, cancellationToken);
@@ -268,7 +322,8 @@ public sealed record EmailAttachment
 }
 
 /// <summary>
-/// Checks what the SDK can check before a request: the tags and the attachments.
+/// Checks what the SDK can check before a request: the tags, the attachments and the
+/// per-email idempotency keys of a batch.
 /// Shared by <see cref="Emails.SendAsync"/>, <see cref="Emails.SendBatchAsync(IEnumerable{SendMailRequest}, IdempotentRequestOptions?, CancellationToken)"/> and the builder.
 /// </summary>
 public static partial class MessageValidation
@@ -327,15 +382,47 @@ public static partial class MessageValidation
         }
     }
 
+    /// <summary>The maximum length of a per-email idempotency key in a batch.</summary>
+    public const int MaxIdempotencyKeyLength = 255;
+
     internal static void Validate(SendMailRequest message, string prefix)
     {
-        string At(string field) => prefix.Length == 0 ? field : $"{prefix}.{field}";
         if (message is null)
         {
             throw new LettermintValidationException("An email message must not be null.", prefix.Length == 0 ? "message" : prefix);
         }
-        ValidateTags(message.Tags, message.Tag.IsSet && !string.IsNullOrEmpty(message.Tag.Value), At("tags"));
-        if (message.Attachments is { } attachments)
+        ValidateContent(message.Tags, message.Tag, message.Attachments, prefix);
+    }
+
+    internal static void Validate(IReadOnlyList<SendBatchMailItem> messages)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < messages.Count; index++)
+        {
+            var prefix = $"messages[{index}]";
+            var message = messages[index] ?? throw new LettermintValidationException("An email message must not be null.", prefix);
+            ValidateContent(message.Tags, message.Tag, message.Attachments, prefix);
+            ValidateIdempotencyKey(message.IdempotencyKey, $"{prefix}.idempotency_key");
+            if (message.IdempotencyKey is { } key && !keys.Add(key))
+            {
+                throw new LettermintValidationException("Idempotency keys must be unique within a batch.", $"{prefix}.idempotency_key");
+            }
+        }
+    }
+
+    internal static void ValidateIdempotencyKey(string? key, string field)
+    {
+        if (key is not null && (key.Length == 0 || (key.Length > MaxIdempotencyKeyLength && key.EnumerateRunes().Count() > MaxIdempotencyKeyLength)))
+        {
+            throw new LettermintValidationException($"An email's idempotency key must be 1 to {MaxIdempotencyKeyLength} characters.", field);
+        }
+    }
+
+    private static void ValidateContent(IReadOnlyList<MessageTagInput>? tags, Optional<string?> tag, IReadOnlyList<MessageAttachmentInput>? attachments, string prefix)
+    {
+        string At(string field) => prefix.Length == 0 ? field : $"{prefix}.{field}";
+        ValidateTags(tags, tag.IsSet && !string.IsNullOrEmpty(tag.Value), At("tags"));
+        if (attachments is not null)
         {
             for (var index = 0; index < attachments.Count; index++)
             {
