@@ -41,7 +41,8 @@ public sealed class Emails : ApiResource
         {
             MessageValidation.Validate(list[index], $"messages[{index}]");
         }
-        return Transport.CallAsync(Operations.SendBatchMail, "Emails.SendBatchAsync", [], default, (IReadOnlyList<SendMailRequest>)list, options, cancellationToken);
+        IReadOnlyList<SendBatchMailItem> items = list.ConvertAll(ToBatchItem);
+        return Transport.CallAsync(Operations.SendBatchMail, "Emails.SendBatchAsync", [], default, items, options, cancellationToken);
     }
 
     /// <summary>Sends up to 500 emails, built with <see cref="Compose()"/>, in one request.</summary>
@@ -71,6 +72,28 @@ public sealed class Emails : ApiResource
         MessageValidation.Validate(message, string.Empty);
         return new EmailBuilder(this, message);
     }
+
+    internal static SendBatchMailItem ToBatchItem(SendMailRequest message) => new()
+    {
+        Route = message.Route,
+        From = message.From,
+        To = message.To,
+        Cc = message.Cc,
+        Bcc = message.Bcc,
+        ReplyTo = message.ReplyTo,
+        Subject = message.Subject,
+        ScheduledAt = message.ScheduledAt,
+        SandboxResult = message.SandboxResult,
+        Headers = message.Headers,
+        Metadata = message.Metadata,
+        Tag = message.Tag,
+        Tags = message.Tags,
+        Settings = message.Settings,
+        Html = message.Html,
+        Text = message.Text,
+        Attachments = message.Attachments,
+        AdditionalProperties = message.AdditionalProperties,
+    };
 
     /// <summary>Checks the sending token: <c>GET /ping</c> returns <c>pong</c>.</summary>
     public async Task<string> PingAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)

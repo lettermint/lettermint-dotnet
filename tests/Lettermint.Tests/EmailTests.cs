@@ -233,6 +233,41 @@ public class EmailTests
     }
 
     [Fact]
+    public async Task SendsEveryFieldOfABatchMessage()
+    {
+        var (client, handler) = Fake.Client();
+        var message = new SendMailRequest
+        {
+            Route = "transactional",
+            From = "a@example.test",
+            To = ["b@example.test"],
+            Cc = ["c@example.test"],
+            Bcc = ["d@example.test"],
+            ReplyTo = ["e@example.test"],
+            Subject = "S",
+            ScheduledAt = "2026-10-20T09:00:00Z",
+            SandboxResult = Models.SandboxResult.Delivered,
+            Headers = new Dictionary<string, string> { ["X-Custom"] = "1" },
+            Metadata = new Dictionary<string, string> { ["k"] = "v" },
+            Tag = null,
+            Tags = [new MessageTagInput { Name = "n", Value = "v" }],
+            Settings = new SendMailRequestSettings { TrackOpens = true },
+            Html = "<p>H</p>",
+            Text = "T",
+            Attachments = [new MessageAttachmentInput { Filename = "a.txt", Content = "YQ==" }],
+            AdditionalProperties = new Dictionary<string, System.Text.Json.JsonElement> { ["future_field"] = System.Text.Json.JsonDocument.Parse("1").RootElement },
+        };
+        await client.Emails.SendAsync(message);
+        await client.Emails.SendBatchAsync([message]);
+        var single = handler.Requests[0].Json!;
+        var batch = Assert.Single(handler.Requests[1].Json!.AsArray());
+        Assert.True(JsonNode.DeepEquals(single, batch), batch!.ToJsonString());
+        // Every field of SendMailRequest is set, so a new field must also be copied to the batch item.
+        var fields = typeof(SendMailRequest).GetProperties().Count(property => property.IsDefined(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute), false));
+        Assert.Equal(fields + 1, single.AsObject().Count);
+    }
+
+    [Fact]
     public void ComposeFromAMessageCopiesIt()
     {
         var (client, _) = Fake.Client();
