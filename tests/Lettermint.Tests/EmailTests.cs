@@ -267,6 +267,81 @@ public class EmailTests
         Assert.Equal(fields + 1, single.AsObject().Count);
     }
 
+    private static SendBatchMailItem Item(string subject, string? key) => new()
+    {
+        From = "Acme <hello@acme.test>",
+        To = ["jane@example.test"],
+        Subject = subject,
+        Text = "Hi",
+        IdempotencyKey = key,
+    };
+
+    [Fact]
+    public async Task SendsPerEmailIdempotencyKeysInTheBatchItems()
+    {
+        var (client, handler) = Fake.Client();
+        await client.Emails.SendBatchAsync([Item("A", "receipt-1"), Item("B", null)], new IdempotentRequestOptions { IdempotencyKey = "batch-1" });
+        var request = handler.Requests[0];
+        Assert.Equal("batch-1", request.Header("Idempotency-Key"));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""
+            [{"from":"Acme <hello@acme.test>","to":["jane@example.test"],"subject":"A","text":"Hi","idempotency_key":"receipt-1"},
+             {"from":"Acme <hello@acme.test>","to":["jane@example.test"],"subject":"B","text":"Hi"}]
+            """), request.Json), request.Body);
+
+        await client.Emails.SendBatchAsync([Item("C", "receipt-2")]);
+        Assert.Null(handler.Requests[1].Header("Idempotency-Key"));
+        Assert.Equal("receipt-2", handler.Requests[1].Json![0]!["idempotency_key"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task BuildsBatchItemsWithAKeyFromABuilder()
+    {
+        var (client, handler) = Fake.Client();
+        var builder = client.Emails.Compose().From("a@example.test").To("b@example.test").Subject("S").Tags(new MessageTagInput { Name = "n", Value = "v" });
+        await client.Emails.SendBatchAsync([builder.BuildBatchItem("welcome-b"), builder.Subject("T").BuildBatchItem()]);
+        await builder.SendAsync();
+        await client.Emails.SendBatchAsync([builder]);
+        var items = handler.Requests[0].Json!.AsArray();
+        Assert.Equal("welcome-b", items[0]!["idempotency_key"]!.GetValue<string>());
+        Assert.Equal("v", items[0]!["tags"]![0]!["value"]!.GetValue<string>());
+        Assert.False(items[1]!.AsObject().ContainsKey("idempotency_key"));
+        Assert.False(handler.Requests[1].Json!.AsObject().ContainsKey("idempotency_key"));
+        Assert.False(handler.Requests[2].Json![0]!.AsObject().ContainsKey("idempotency_key"));
+        Assert.Throws<LettermintValidationException>(() => builder.BuildBatchItem(""));
+    }
+
+    [Fact]
+    public async Task ValidatesPerEmailIdempotencyKeysBeforeAnyRequest()
+    {
+        var (client, handler) = Fake.Client();
+        var empty = await Assert.ThrowsAsync<LettermintValidationException>(() => client.Emails.SendBatchAsync([Item("A", "a"), Item("B", "")]));
+        Assert.Equal("messages[1].idempotency_key", empty.Field);
+        var tooLong = await Assert.ThrowsAsync<LettermintValidationException>(() => client.Emails.SendBatchAsync([Item("A", new string('k', 256))]));
+        Assert.Equal("messages[0].idempotency_key", tooLong.Field);
+        var duplicate = await Assert.ThrowsAsync<LettermintValidationException>(() => client.Emails.SendBatchAsync([Item("A", "same"), Item("B", "other"), Item("C", "same")]));
+        Assert.Equal("messages[2].idempotency_key", duplicate.Field);
+        var tags = await Assert.ThrowsAsync<LettermintValidationException>(() => client.Emails.SendBatchAsync([Item("A", null) with { Tags = [new() { Name = "x y", Value = "z" }] }]));
+        Assert.Equal("messages[0].tags", tags.Field);
+        await Assert.ThrowsAsync<LettermintValidationException>(() => client.Emails.SendBatchAsync([Item("A", null), null!]));
+        Assert.Empty(handler.Requests);
+
+        await client.Emails.SendBatchAsync([Item("A", new string('k', 255)), Item("B", string.Concat(Enumerable.Repeat("\U0001F4E7", 255))), Item("C", "Same"), Item("D", "same")]);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ExposesTheIdempotencyConflictAndAcceptedEmailsOfABatch()
+    {
+        var (client, _) = Fake.Client((_, index) => index == 0
+            ? Fake.Json(409, new { error = new { code = "IDEMPOTENCY_CONFLICT", message = "The idempotency key was used for a different email." } })
+            : Fake.Json(500, new { error = new { code = "INTERNAL_ERROR", message = "Server Error", details = new { accepted = new[] { new { index = 0, message_id = "msg_1" } } } } }));
+        var conflict = await Assert.ThrowsAsync<ConflictException>(() => client.Emails.SendBatchAsync([Item("A", "a")]));
+        Assert.Equal("IDEMPOTENCY_CONFLICT", conflict.Code);
+        var partial = await Assert.ThrowsAsync<ServerException>(() => client.Emails.SendBatchAsync([Item("A", "a"), Item("B", "b")]));
+        var accepted = Assert.Single(partial.Details!.Value.GetProperty("accepted").EnumerateArray());
+        Assert.Equal("msg_1", accepted.GetProperty("message_id").GetString());
+    }
+
     [Fact]
     public void ComposeFromAMessageCopiesIt()
     {

@@ -172,6 +172,18 @@ IReadOnlyList<SendMailResponse> results = await lettermint.Emails.SendBatchAsync
 ]);
 ```
 
+Give each email its own idempotency key to make a batch safe to send again. Pass `SendBatchMailItem` records, or call `BuildBatchItem(key)` on a builder:
+
+```csharp
+await lettermint.Emails.SendBatchAsync(
+[
+    new SendBatchMailItem { From = "hello@acme.com", To = ["jane@example.com"], Subject = "Your receipt", Text = "…", IdempotencyKey = $"receipt-{order.Id}" },
+    welcome.To("john@example.com").BuildBatchItem("welcome-john"),
+]);
+```
+
+If an email with the same key and content was accepted in the last 24 hours, the API returns its original result and does not send it again, also from a later batch. Keys are 1 to 255 characters and must be unique within a batch; the SDK checks both before the request. Reusing a key with different content, or while that email is still being processed, rejects the whole batch with a `ConflictException` and sends nothing. If an email fails mid-batch, the emails before it may already be accepted: the exception's `Details` lists them in `accepted` (`index` and `message_id`).
+
 ### Idempotency
 
 Pass an idempotency key to make retries safe. The API processes a key once, so a retry with the same key does not send the email again. The key applies only to the call it is passed to.
@@ -182,6 +194,8 @@ await lettermint.Emails.SendAsync(message, once);
 await builder.SendAsync(new IdempotentRequestOptions { IdempotencyKey = "welcome-jane" });
 await lettermint.Emails.SendBatchAsync(messages, new IdempotentRequestOptions { IdempotencyKey = "newsletter-2026-10" });
 ```
+
+The `Idempotency-Key` header covers a whole call. For batches, per-email keys (see [Batch sending](#batch-sending)) also skip emails that an earlier batch already sent.
 
 The SDK never retries on its own.
 
