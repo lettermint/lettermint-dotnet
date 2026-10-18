@@ -75,6 +75,7 @@ public class TeamApiTests
         ["POST /send/batch"] = l => l.Emails.SendBatchAsync([Fake.Message()]),
         ["POST /suppressions"] = l => l.Suppressions.CreateAsync(new StoreSuppressionData { Reason = SuppressionCreateReason.Manual, Scope = SuppressionCreateScope.Team, Emails = new[] { "blocked@example.test" } }),
         ["POST /webhooks"] = l => l.Webhooks.CreateAsync(new StoreWebhookData { Name = "Hook", Url = "https://example.test/hook", Events = [WebhookEvent.MessageSent] }),
+        ["POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry"] = l => l.Webhooks.Deliveries.RetryAsync(Id("webhookId"), Id("deliveryId")),
         ["POST /webhooks/{webhookId}/regenerate-secret"] = l => l.Webhooks.RegenerateSecretAsync(Id("webhookId")),
         ["POST /webhooks/{webhookId}/test"] = l => l.Webhooks.TestAsync(Id("webhookId")),
         ["PUT /domains/{domainId}/projects"] = l => l.Domains.UpdateProjectsAsync(Id("domainId"), new UpdateDomainProjectsData { ProjectIds = ["p"] }),
@@ -92,7 +93,7 @@ public class TeamApiTests
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
         Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
-        Assert.Equal(59, Operations.All.Count);
+        Assert.Equal(60, Operations.All.Count);
     }
 
     private static HttpResponseMessage ResponseFor(OperationDefinition operation) => operation.ResponseKind switch
@@ -159,7 +160,7 @@ public class TeamApiTests
             [typeof(Team)] = ["RetrieveAsync", "RolesAsync", "UpdateAsync", "UsageAsync"],
             [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
             [typeof(Webhooks)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RegenerateSecretAsync", "RetrieveAsync", "TestAsync", "UpdateAsync"],
-            [typeof(WebhookDeliveries)] = ["IterateAsync", "ListAsync", "RetrieveAsync"],
+            [typeof(WebhookDeliveries)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "RetryAsync"],
         };
         foreach (var (type, expected) in layout)
         {
@@ -259,6 +260,91 @@ public class TeamApiTests
         var (client, _) = Fake.Client((_, _) => Fake.Text(200, message.ToJsonString(), "application/json"));
         var result = await client.Messages.RetrieveAsync("msg_new");
         Assert.Equal(original, result.ResentFromMessageId);
+    }
+
+    [Fact]
+    public async Task RetriesAWebhookDelivery()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(202, new { message = "Webhook delivery retry queued.", delivery_id = "delivery_1" }));
+        RetryWebhookDeliveryResponse result = await client.Webhooks.Deliveries.RetryAsync("webhook/1", "delivery?1");
+        Assert.Equal("Webhook delivery retry queued.", result.Message);
+        Assert.Equal("delivery_1", result.DeliveryId);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("POST", request.Method);
+        Assert.Equal("https://api.lettermint.co/v1/webhooks/webhook%2F1/deliveries/delivery%3F1/retry", request.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+        Assert.Null(request.Header("x-lettermint-token"));
+        Assert.Null(request.Header("Idempotency-Key"));
+        Assert.Null(request.Header("Content-Type"));
+        Assert.Null(request.Body);
+    }
+
+    [Fact]
+    public async Task RetryingAWebhookDeliveryNeedsTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Webhooks.Deliveries.RetryAsync("w", "d"));
+        Assert.Equal("Webhooks.Deliveries.RetryAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("WEBHOOK_DELIVERY_NOT_RETRYABLE")]
+    [InlineData("WEBHOOK_DELIVERY_RETRY_IN_PROGRESS")]
+    [InlineData("WEBHOOK_DISABLED")]
+    public async Task ARejectedWebhookDeliveryRetryThrowsAConflictException(string code)
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(409, new { error = new { code, message = "This delivery cannot be retried." } }));
+        LettermintApiException error = await Assert.ThrowsAsync<ConflictException>(() => client.Webhooks.Deliveries.RetryAsync("w", "d"));
+        Assert.Equal(HttpStatusCode.Conflict, error.StatusCode);
+        Assert.Equal(code, error.Code);
+        Assert.Equal("This delivery cannot be retried.", error.Message);
+    }
+
+    [Fact]
+    public async Task ReadsBothErrorBodyShapesFromTheWebhookDeliveryEndpoints()
+    {
+        var bodies = new object[]
+        {
+            new { message = "Too many requests." },
+            new { error = new { code = "RATE_LIMITED", message = "Too many requests." } },
+        };
+        foreach (var body in bodies)
+        {
+            var (client, _) = Fake.Client((_, _) =>
+            {
+                var response = Fake.Json(429, body);
+                response.Headers.Add("Retry-After", "3");
+                return response;
+            });
+            var error = await Assert.ThrowsAsync<RateLimitException>(() => client.Webhooks.Deliveries.RetryAsync("w", "d"));
+            Assert.Equal("Too many requests.", error.Message);
+            Assert.Equal(TimeSpan.FromSeconds(3), error.RetryAfter);
+        }
+        var (unauthenticated, _) = Fake.Client((_, _) => Fake.Json(401, new { error = new { code = "UNAUTHENTICATED", message = "Unauthenticated." } }));
+        var authError = await Assert.ThrowsAsync<AuthenticationException>(() => unauthenticated.Webhooks.Deliveries.RetrieveAsync("w", "d"));
+        Assert.Equal("UNAUTHENTICATED", authError.Code);
+        Assert.Equal("Unauthenticated.", authError.Message);
+    }
+
+    [Theory]
+    [InlineData("2026-10-18T12:05:00Z", true)]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    public async Task KeepsTheNextAutomaticRetryOfAWebhookDelivery(string? next, bool present)
+    {
+        var delivery = new JsonObject { ["id"] = "delivery_1" };
+        if (present)
+        {
+            delivery["next_retry_at"] = next;
+        }
+        var (client, _) = Fake.Client((_, _) => Fake.Text(200, delivery.ToJsonString(), "application/json"));
+        var result = await client.Webhooks.Deliveries.RetrieveAsync("w", "delivery_1");
+        Assert.Equal(next, result.NextRetryAt);
+        var page = new JsonObject { ["data"] = new JsonArray(delivery.DeepClone()), ["next_cursor"] = null };
+        var (listClient, _) = Fake.Client((_, _) => Fake.Text(200, page.ToJsonString(), "application/json"));
+        var list = await listClient.Webhooks.Deliveries.ListAsync("w");
+        Assert.Equal(next, Assert.Single(list.Data).NextRetryAt);
     }
 
     [Fact]
@@ -480,6 +566,10 @@ public class TeamApiTests
         Assert.Equal("Domains.RetrieveAsync: domainId must be a non-empty string other than \".\" and \"..\".", error.Message);
         var nested = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Webhooks.Deliveries.RetrieveAsync("w", id!));
         Assert.StartsWith("Webhooks.Deliveries.RetrieveAsync: deliveryId", nested.Message);
+        var retryWebhook = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Webhooks.Deliveries.RetryAsync(id!, "d"));
+        Assert.StartsWith("Webhooks.Deliveries.RetryAsync: webhookId", retryWebhook.Message);
+        var retryDelivery = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Webhooks.Deliveries.RetryAsync("w", id!));
+        Assert.StartsWith("Webhooks.Deliveries.RetryAsync: deliveryId", retryDelivery.Message);
         Assert.Empty(handler.Requests);
     }
 }
