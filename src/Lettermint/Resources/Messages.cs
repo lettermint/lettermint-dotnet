@@ -4,9 +4,9 @@ using Lettermint.Models;
 namespace Lettermint;
 
 /// <summary>
-/// Sent and received messages. Needs the team token; <see cref="RescheduleAsync"/>
-/// and <see cref="CancelAsync"/> also accept the sending token when no team token
-/// is configured.
+/// Sent and received messages. Needs the team token; <see cref="RescheduleAsync"/>,
+/// <see cref="CancelAsync"/> and <see cref="ResendAsync"/> also accept the sending
+/// token when no team token is configured.
 /// </summary>
 public sealed class Messages : ApiResource
 {
@@ -54,6 +54,19 @@ public sealed class Messages : ApiResource
     /// <summary>Cancels a scheduled message. Uses the team token if configured, otherwise the sending token.</summary>
     public Task<ScheduledMessage> CancelAsync(string messageId, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.CancelScheduledMessage, "Messages.CancelAsync", [messageId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Sends the stored content of a sent message again as a new message with its own ID.
+    /// Without <paramref name="body"/> (or its <c>Recipients</c>) every original recipient
+    /// receives it. Works while the content is retained (otherwise HTTP 410), at most 5 times
+    /// in 24 hours. Uses the team token if configured, otherwise the sending token.
+    /// </summary>
+    /// <param name="messageId">The message to resend.</param>
+    /// <param name="body">The recipients of the original message to resend to; <c>null</c> sends no body.</param>
+    /// <param name="options">The idempotency key and timeout of this call.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public Task<PendingSendMailResponse> ResendAsync(string messageId, ResendMessageRequest? body = null, IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.ResendMessage, "Messages.ResendAsync", [messageId], default, body, options, cancellationToken);
 
     /// <summary>Releases one quarantined inbound message for webhook delivery.</summary>
     public Task<ProcessInboundMessageResponse> ProcessAsync(string messageId, IdempotentRequestOptions? options = null, CancellationToken cancellationToken = default)

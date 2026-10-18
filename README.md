@@ -59,7 +59,7 @@ var lettermint = new LettermintClient(new LettermintOptions
 });
 ```
 
-Each part uses its own token and never falls back to the other one. If the token a method needs is missing, the method throws a `LettermintConfigException` that names the option (`Domains.ListAsync needs TeamToken; …`) before any request. `lettermint.PingAsync()` uses the team token when it is set, otherwise the sending token. `Messages.RescheduleAsync` and `Messages.CancelAsync` accept either token in the same way.
+Each part uses its own token and never falls back to the other one. If the token a method needs is missing, the method throws a `LettermintConfigException` that names the option (`Domains.ListAsync needs TeamToken; …`) before any request. `lettermint.PingAsync()` uses the team token when it is set, otherwise the sending token. `Messages.RescheduleAsync`, `Messages.CancelAsync` and `Messages.ResendAsync` accept either token in the same way.
 
 You can also pass a single token as a string. The SDK chooses its type by the format: `lm_team_` followed by letters and digits is a team token, and `lm_` followed by letters and digits is a sending token. Any other value, such as an SSO verification token (`lm_sso_…`), throws a `LettermintConfigException`; set `SendingToken` or `TeamToken` explicitly in that case. Error messages never contain the token.
 
@@ -202,6 +202,20 @@ await lettermint.Messages.RescheduleAsync(result.MessageId, new RescheduleMessag
 await lettermint.Messages.CancelAsync(result.MessageId);
 ```
 
+### Resending
+
+Send a sent message again, to every original recipient or only to some of them:
+
+```csharp
+PendingSendMailResponse resent = await lettermint.Messages.ResendAsync(messageId);
+await lettermint.Messages.ResendAsync(
+    messageId,
+    new ResendMessageRequest { Recipients = ["jane@example.com"] },
+    new IdempotentRequestOptions { IdempotencyKey = $"resend-{messageId}-jane" });
+```
+
+The resend is a new message with its own ID; its `MessageData.ResentFromMessageId` links it to the original. A message can be resent while its content is retained (otherwise the API answers 410, a `LettermintApiException`) and at most 5 times in 24 hours.
+
 ### Sandbox
 
 In a Sandbox project, nothing is delivered. Choose the simulated result per email with `.SandboxResult(SandboxResult.HardBounced)`; the response reports `Sandbox` and `SandboxResult`.
@@ -247,7 +261,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | Property | Methods |
 | --- | --- |
 | `Domains` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `DeleteAsync`, `VerifyDnsRecordsAsync`, `VerifyDnsRecordAsync`, `UpdateProjectsAsync` |
-| `Messages` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `EventsAsync`, `IterateEventsAsync`, `SourceAsync`, `HtmlAsync`, `TextAsync`, `RescheduleAsync`, `CancelAsync`, `ProcessAsync` |
+| `Messages` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `EventsAsync`, `IterateEventsAsync`, `SourceAsync`, `HtmlAsync`, `TextAsync`, `RescheduleAsync`, `CancelAsync`, `ResendAsync`, `ProcessAsync` |
 | `Projects` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `RotateTokenAsync` |
 | `Projects.ReportForwarding` | `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyAsync`, `ResendCodeAsync` |
 | `Routes` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyInboundDomainAsync` |

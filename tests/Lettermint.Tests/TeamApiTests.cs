@@ -64,6 +64,7 @@ public class TeamApiTests
         ["POST /domains/{domainId}/dns-records/{recordId}/verify"] = l => l.Domains.VerifyDnsRecordAsync(Id("domainId"), Id("recordId")),
         ["POST /messages/{messageId}/cancel"] = l => l.Messages.CancelAsync(Id("messageId")),
         ["POST /messages/{messageId}/process"] = l => l.Messages.ProcessAsync(Id("messageId")),
+        ["POST /messages/{messageId}/resend"] = l => l.Messages.ResendAsync(Id("messageId"), new ResendMessageRequest { Recipients = ["jane@example.test"] }),
         ["POST /projects"] = l => l.Projects.CreateAsync(new StoreProjectData { Name = "Production" }),
         ["POST /projects/{projectId}/report-forwarding/resend-code"] = l => l.Projects.ReportForwarding.ResendCodeAsync(Id("projectId")),
         ["POST /projects/{projectId}/report-forwarding/verify"] = l => l.Projects.ReportForwarding.VerifyAsync(Id("projectId"), new VerifyReportForwardingRequest { Code = "123456" }),
@@ -91,7 +92,7 @@ public class TeamApiTests
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
         Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
-        Assert.Equal(58, Operations.All.Count);
+        Assert.Equal(59, Operations.All.Count);
     }
 
     private static HttpResponseMessage ResponseFor(OperationDefinition operation) => operation.ResponseKind switch
@@ -149,7 +150,7 @@ public class TeamApiTests
             [typeof(LettermintClient)] = ["AnalyticsAsync", "AnalyticsPagesAsync", "BlockedFileTypesAsync", "PingAsync"],
             [typeof(Emails)] = ["Compose", "PingAsync", "SendAsync", "SendBatchAsync"],
             [typeof(Domains)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateProjectsAsync", "VerifyDnsRecordAsync", "VerifyDnsRecordsAsync"],
-            [typeof(Messages)] = ["CancelAsync", "EventsAsync", "HtmlAsync", "IterateAsync", "IterateEventsAsync", "ListAsync", "ProcessAsync", "RescheduleAsync", "RetrieveAsync", "SourceAsync", "TextAsync"],
+            [typeof(Messages)] = ["CancelAsync", "EventsAsync", "HtmlAsync", "IterateAsync", "IterateEventsAsync", "ListAsync", "ProcessAsync", "RescheduleAsync", "ResendAsync", "RetrieveAsync", "SourceAsync", "TextAsync"],
             [typeof(Projects)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RotateTokenAsync", "UpdateAsync"],
             [typeof(ReportForwarding)] = ["DeleteAsync", "ResendCodeAsync", "RetrieveAsync", "UpdateAsync", "VerifyAsync"],
             [typeof(Routes)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAsync", "VerifyInboundDomainAsync"],
@@ -192,6 +193,72 @@ public class TeamApiTests
         await client.Messages.ProcessAsync("m");
         Assert.Equal("process-1", handler.Requests[0].Header("Idempotency-Key"));
         Assert.Null(handler.Requests[1].Header("Idempotency-Key"));
+    }
+
+    [Fact]
+    public async Task ResendsAMessage()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(202, new { message_id = "msg_new", status = "pending" }));
+        var result = await client.Messages.ResendAsync("message/id", new ResendMessageRequest { Recipients = ["jane@example.test", "john@example.test"] }, new IdempotentRequestOptions { IdempotencyKey = "resend-1" });
+        Assert.Equal("msg_new", result.MessageId);
+        Assert.Equal("pending", result.Status);
+        var request = handler.Requests[0];
+        Assert.Equal("POST", request.Method);
+        Assert.Equal("https://api.lettermint.co/v1/messages/message%2Fid/resend", request.Url.ToString());
+        Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+        Assert.Null(request.Header("x-lettermint-token"));
+        Assert.Equal("resend-1", request.Header("Idempotency-Key"));
+        Assert.Equal("application/json", request.Header("Content-Type"));
+        Assert.Equal("""{"recipients":["jane@example.test","john@example.test"]}""", request.Body);
+    }
+
+    [Fact]
+    public async Task ResendsToEveryOriginalRecipientWithoutRecipients()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(202, new { message_id = "msg_new", status = "pending" }));
+        await client.Messages.ResendAsync("m");
+        await client.Messages.ResendAsync("m", new ResendMessageRequest());
+        Assert.Null(handler.Requests[0].Body);
+        Assert.Null(handler.Requests[0].Header("Content-Type"));
+        Assert.Null(handler.Requests[0].Header("Idempotency-Key"));
+        Assert.Equal("{}", handler.Requests[1].Body);
+        await Assert.ThrowsAsync<LettermintConfigException>(() => client.Messages.ResendAsync(""));
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task ResendUsesTheSendingTokenWithoutATeamToken()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(202, new { message_id = "msg_new", status = "pending" }), team: false);
+        await client.Messages.ResendAsync("m");
+        Assert.Equal(Fake.SendingToken, handler.Requests[0].Header("x-lettermint-token"));
+        Assert.Null(handler.Requests[0].Header("Authorization"));
+    }
+
+    [Fact]
+    public async Task AResendWithoutRetainedContentThrowsAnApiException()
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(410, new { error = new { code = "MESSAGE_CONTENT_UNAVAILABLE", message = "The content of this message is no longer available." } }));
+        var error = await Assert.ThrowsAsync<LettermintApiException>(() => client.Messages.ResendAsync("m"));
+        Assert.Equal(HttpStatusCode.Gone, error.StatusCode);
+        Assert.Equal("MESSAGE_CONTENT_UNAVAILABLE", error.Code);
+        Assert.Equal("The content of this message is no longer available.", error.Message);
+    }
+
+    [Theory]
+    [InlineData("msg_original", true)]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    public async Task KeepsTheMessageAResendCameFrom(string? original, bool present)
+    {
+        var message = new JsonObject { ["id"] = "msg_new" };
+        if (present)
+        {
+            message["resent_from_message_id"] = original;
+        }
+        var (client, _) = Fake.Client((_, _) => Fake.Text(200, message.ToJsonString(), "application/json"));
+        var result = await client.Messages.RetrieveAsync("msg_new");
+        Assert.Equal(original, result.ResentFromMessageId);
     }
 
     [Fact]
