@@ -4661,9 +4661,10 @@ public sealed partial record MessageData
     /// <summary>
     /// The ID of the message this message resent. Null when it is not a resend
     /// </summary>
-    /// <remarks>Always present; may be null.</remarks>
+    /// <remarks>Optional and nullable: absent and null both read as null.</remarks>
     [JsonPropertyName("resent_from_message_id")]
-    public required string? ResentFromMessageId { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ResentFromMessageId { get; init; }
 
     /// <summary>Fields that this SDK version does not know, kept as raw JSON.</summary>
     [JsonExtensionData]

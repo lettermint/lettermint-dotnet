@@ -246,11 +246,16 @@ public class TeamApiTests
     }
 
     [Theory]
-    [InlineData("msg_original")]
-    [InlineData(null)]
-    public async Task KeepsTheMessageAResendCameFrom(string? original)
+    [InlineData("msg_original", true)]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    public async Task KeepsTheMessageAResendCameFrom(string? original, bool present)
     {
-        var message = new JsonObject { ["id"] = "msg_new", ["resent_from_message_id"] = original };
+        var message = new JsonObject { ["id"] = "msg_new" };
+        if (present)
+        {
+            message["resent_from_message_id"] = original;
+        }
         var (client, _) = Fake.Client((_, _) => Fake.Text(200, message.ToJsonString(), "application/json"));
         var result = await client.Messages.RetrieveAsync("msg_new");
         Assert.Equal(original, result.ResentFromMessageId);
