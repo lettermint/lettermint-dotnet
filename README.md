@@ -284,8 +284,10 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync` |
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
-| `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)` |
+| `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
+
+`Webhooks.Deliveries.RetryAsync(webhookId, deliveryId)` sends a delivery's original payload to the webhook again now. The retry counts as a delivery attempt; if it fails with a retryable error, automatic retries continue.
 
 ### Query parameters and pagination
 

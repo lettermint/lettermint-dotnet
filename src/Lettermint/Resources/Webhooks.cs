@@ -22,6 +22,13 @@ public sealed class WebhookDeliveries : ApiResource
     /// <summary>Retrieves one delivery attempt.</summary>
     public Task<WebhookDeliveryData> RetrieveAsync(string webhookId, string deliveryId, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.GetWebhookDelivery, "Webhooks.Deliveries.RetrieveAsync", [webhookId, deliveryId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Sends the delivery's original payload to the webhook again now. The retry counts as a delivery attempt;
+    /// if it fails with a retryable error, automatic retries continue.
+    /// </summary>
+    public Task<RetryWebhookDeliveryResponse> RetryAsync(string webhookId, string deliveryId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.RetryWebhookDelivery, "Webhooks.Deliveries.RetryAsync", [webhookId, deliveryId], default, default, options, cancellationToken);
 }
 
 /// <summary>Webhook endpoints. Needs the team token. To verify incoming deliveries, use <see cref="Webhook"/>.</summary>
