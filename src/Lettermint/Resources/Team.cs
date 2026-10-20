@@ -133,4 +133,36 @@ public sealed class Team : ApiResource
     /// <summary>The roles that can be assigned to members.</summary>
     public Task<TeamRoleListResponse> RolesAsync(RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.ListTeamRoles, "Team.RolesAsync", [], default, default, options, cancellationToken);
+
+    /// <summary>Retrieves a team role. Use a role ID from <see cref="RolesAsync"/>.</summary>
+    public Task<TeamRoleData> RetrieveRoleAsync(string roleId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.GetTeamRole, "Team.RetrieveRoleAsync", [roleId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Creates a custom team role. Needs a plan with custom roles. Include the permissions that the chosen permissions
+    /// depend on; role names are unique within the team.
+    /// </summary>
+    public Task<TeamRoleData> CreateRoleAsync(CreateTeamRoleData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.CreateTeamRole, "Team.CreateRoleAsync", [], default, body, options, cancellationToken);
+
+    /// <summary>
+    /// Replaces the name, description and complete permission set of a custom role. The change applies to every member,
+    /// invite and SCIM group that holds the role. Built-in roles cannot be changed.
+    /// </summary>
+    public Task<TeamRoleData> UpdateRoleAsync(string roleId, UpdateTeamRoleData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.UpdateTeamRole, "Team.UpdateRoleAsync", [roleId], default, body, options, cancellationToken);
+
+    /// <summary>
+    /// Deletes a custom role. A role that is still assigned to members, invites or SCIM groups needs
+    /// <c>ReplacementRoleId</c>, the role that receives those assignments. Built-in roles cannot be deleted.
+    /// </summary>
+    public Task<MessageResponse> DeleteRoleAsync(string roleId, DeleteTeamRoleQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DeleteTeamRole, "Team.DeleteRoleAsync", [roleId], query, default, options, cancellationToken);
+
+    /// <summary>
+    /// Copies a role under a new name. Without a description, the copy keeps the source role's description.
+    /// The Owner role cannot be duplicated.
+    /// </summary>
+    public Task<TeamRoleData> DuplicateRoleAsync(string roleId, DuplicateTeamRoleData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DuplicateTeamRole, "Team.DuplicateRoleAsync", [roleId], default, body, options, cancellationToken);
 }

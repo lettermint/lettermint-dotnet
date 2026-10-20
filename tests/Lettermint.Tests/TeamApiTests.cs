@@ -19,6 +19,7 @@ public class TeamApiTests
         ["webhookId"] = "webhook_1",
         ["deliveryId"] = "delivery_1",
         ["inviteId"] = "invite/1",
+        ["roleId"] = "role/1",
     };
 
     private static string Id(string name) => Ids[name];
@@ -30,11 +31,6 @@ public class TeamApiTests
     private static readonly string[] Pending =
     [
         "DELETE /team/members/{userId}",
-        "DELETE /team/roles/{roleId}",
-        "GET /team/roles/{roleId}",
-        "POST /team/roles",
-        "POST /team/roles/{roleId}/duplicate",
-        "PUT /team/roles/{roleId}",
     ];
 
     /// <summary>Every operation of the API, called through its public SDK method.</summary>
@@ -45,6 +41,7 @@ public class TeamApiTests
         ["DELETE /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.DeleteAsync(Id("projectId")),
         ["DELETE /routes/{routeId}"] = l => l.Routes.DeleteAsync(Id("routeId")),
         ["DELETE /team/invites/{inviteId}"] = l => l.Team.Invites.RevokeAsync(Id("inviteId")),
+        ["DELETE /team/roles/{roleId}"] = l => l.Team.DeleteRoleAsync(Id("roleId")),
         ["DELETE /suppressions/{suppressionId}"] = l => l.Suppressions.DeleteAsync(Id("suppressionId")),
         ["DELETE /webhooks/{webhookId}"] = l => l.Webhooks.DeleteAsync(Id("webhookId")),
         ["GET /blocked-file-types"] = l => l.BlockedFileTypesAsync(),
@@ -70,6 +67,7 @@ public class TeamApiTests
         ["GET /team/members"] = l => l.Team.Members.ListAsync(),
         ["GET /team/members/{userId}"] = l => l.Team.Members.RetrieveAsync(Id("userId")),
         ["GET /team/roles"] = l => l.Team.RolesAsync(),
+        ["GET /team/roles/{roleId}"] = l => l.Team.RetrieveRoleAsync(Id("roleId")),
         ["GET /team/usage"] = l => l.Team.UsageAsync(),
         ["GET /webhooks"] = l => l.Webhooks.ListAsync(),
         ["GET /webhooks/{webhookId}"] = l => l.Webhooks.RetrieveAsync(Id("webhookId")),
@@ -93,6 +91,8 @@ public class TeamApiTests
         ["POST /send/batch"] = l => l.Emails.SendBatchAsync([Fake.Message()]),
         ["POST /suppressions"] = l => l.Suppressions.CreateAsync(new StoreSuppressionData { Reason = SuppressionCreateReason.Manual, Scope = SuppressionCreateScope.Team, Emails = new[] { "blocked@example.test" } }),
         ["POST /team/invites"] = l => l.Team.Invites.CreateAsync(new CreateTeamInviteData { Email = "jane@example.test", RoleId = "role_1", ProjectAccess = new CreateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All } }),
+        ["POST /team/roles"] = l => l.Team.CreateRoleAsync(new CreateTeamRoleData { Name = "Support", Permissions = [RbacPermission.MembersRead] }),
+        ["POST /team/roles/{roleId}/duplicate"] = l => l.Team.DuplicateRoleAsync(Id("roleId"), new DuplicateTeamRoleData { Name = "Support copy" }),
         ["POST /webhooks"] = l => l.Webhooks.CreateAsync(new StoreWebhookData { Name = "Hook", Url = "https://example.test/hook", Events = [WebhookEvent.MessageSent] }),
         ["POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry"] = l => l.Webhooks.Deliveries.RetryAsync(Id("webhookId"), Id("deliveryId")),
         ["POST /webhooks/{webhookId}/regenerate-secret"] = l => l.Webhooks.RegenerateSecretAsync(Id("webhookId")),
@@ -103,6 +103,7 @@ public class TeamApiTests
         ["PUT /routes/{routeId}"] = l => l.Routes.UpdateAsync(Id("routeId"), new UpdateRouteData { Name = "Renamed" }),
         ["PUT /team"] = l => l.Team.UpdateAsync(new UpdateTeamData { Name = "Acme" }),
         ["PUT /team/invites/{inviteId}"] = l => l.Team.Invites.UpdateAsync(Id("inviteId"), new UpdateTeamInviteData { Email = "jane@example.test", RoleId = "role_1", ProjectAccess = new UpdateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All } }),
+        ["PUT /team/roles/{roleId}"] = l => l.Team.UpdateRoleAsync(Id("roleId"), new UpdateTeamRoleData { Name = "Support", Permissions = [RbacPermission.MembersRead] }),
         ["PUT /team/members/{userId}/assignment"] = l => l.Team.Members.UpdateAssignmentAsync(Id("userId"), new UpdateTeamMemberAssignmentData { RoleId = "role_1", ProjectAccess = new UpdateTeamMemberAssignmentDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["PUT /webhooks/{webhookId}"] = l => l.Webhooks.UpdateAsync(Id("webhookId"), new UpdateWebhookData { BasicAuth = null }),
     };
@@ -178,7 +179,7 @@ public class TeamApiTests
             [typeof(Routes)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAsync", "VerifyInboundDomainAsync"],
             [typeof(Stats)] = ["RetrieveAsync"],
             [typeof(Suppressions)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
-            [typeof(Team)] = ["RetrieveAsync", "RolesAsync", "UpdateAsync", "UsageAsync"],
+            [typeof(Team)] = ["CreateRoleAsync", "DeleteRoleAsync", "DuplicateRoleAsync", "RetrieveAsync", "RetrieveRoleAsync", "RolesAsync", "UpdateAsync", "UpdateRoleAsync", "UsageAsync"],
             [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
             [typeof(TeamInvites)] = ["CreateAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RevokeAsync", "UpdateAsync"],
             [typeof(Webhooks)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RegenerateSecretAsync", "RetrieveAsync", "TestAsync", "UpdateAsync"],
@@ -481,6 +482,129 @@ public class TeamApiTests
         Assert.Equal(["The email field must be a valid email address."], validation.Errors!["email"]);
     }
 
+    private static JsonObject RoleJson(string? description, bool present = true)
+    {
+        var role = new JsonObject
+        {
+            ["id"] = "role_1",
+            ["name"] = "Support",
+            ["system_key"] = null,
+            ["permissions"] = new JsonArray("members:read", "domains:read"),
+            ["assignable"] = true,
+        };
+        if (present)
+        {
+            role["description"] = description;
+        }
+        return role;
+    }
+
+    [Theory]
+    [InlineData("Handles customer questions.", true)]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    public async Task RetrievesATeamRoleWithItsDescription(string? description, bool present)
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Text(200, RoleJson(description, present).ToJsonString(), "application/json"));
+        TeamRoleData role = await client.Team.RetrieveRoleAsync("role/1");
+        Assert.Equal("role_1", role.Id);
+        Assert.Equal("Support", role.Name);
+        Assert.Equal(description, role.Description);
+        Assert.Null(role.SystemKey);
+        Assert.Equal([RbacPermission.MembersRead, RbacPermission.DomainsRead], role.Permissions);
+        Assert.True(role.Assignable);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("GET", request.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/roles/role%2F1", request.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+        Assert.Null(request.Header("x-lettermint-token"));
+        Assert.Null(request.Body);
+    }
+
+    [Fact]
+    public async Task CreatesUpdatesAndDuplicatesTeamRoles()
+    {
+        var (client, handler) = Fake.Client((request, _) => Fake.Text(request.Method == "POST" ? 201 : 200, RoleJson("Handles customer questions.").ToJsonString(), "application/json"));
+        var created = await client.Team.CreateRoleAsync(new CreateTeamRoleData
+        {
+            Name = "Support",
+            Description = "Handles customer questions.",
+            Permissions = [RbacPermission.MembersRead, RbacPermission.DomainsRead],
+        });
+        Assert.Equal("Handles customer questions.", created.Description);
+        await client.Team.CreateRoleAsync(new CreateTeamRoleData { Name = "Support", Permissions = [RbacPermission.MembersRead] });
+        var updated = await client.Team.UpdateRoleAsync("role/1", new UpdateTeamRoleData { Name = "Support", Description = null, Permissions = [RbacPermission.MembersRead] });
+        Assert.Equal("role_1", updated.Id);
+        var duplicated = await client.Team.DuplicateRoleAsync("role/1", new DuplicateTeamRoleData { Name = "Support copy" });
+        Assert.Equal("Support", duplicated.Name);
+        await client.Team.DuplicateRoleAsync("role/1", new DuplicateTeamRoleData { Name = "Support copy", Description = "A copy." });
+
+        Assert.Equal(["POST", "POST", "PUT", "POST", "POST"], handler.Requests.Select(r => r.Method));
+        Assert.Equal(
+            [
+                "https://api.lettermint.co/v1/team/roles",
+                "https://api.lettermint.co/v1/team/roles",
+                "https://api.lettermint.co/v1/team/roles/role%2F1",
+                "https://api.lettermint.co/v1/team/roles/role%2F1/duplicate",
+                "https://api.lettermint.co/v1/team/roles/role%2F1/duplicate",
+            ],
+            handler.Requests.Select(r => r.Url.AbsoluteUri));
+        Assert.All(handler.Requests, request =>
+        {
+            Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+            Assert.Null(request.Header("x-lettermint-token"));
+            Assert.Null(request.Header("Idempotency-Key"));
+            Assert.Equal("application/json", request.Header("Content-Type"));
+        });
+        Assert.Equal("""{"name":"Support","description":"Handles customer questions.","permissions":["members:read","domains:read"]}""", handler.Requests[0].Body);
+        Assert.Equal("""{"name":"Support","permissions":["members:read"]}""", handler.Requests[1].Body);
+        Assert.Equal("""{"name":"Support","description":null,"permissions":["members:read"]}""", handler.Requests[2].Body);
+        Assert.Equal("""{"name":"Support copy"}""", handler.Requests[3].Body);
+        Assert.Equal("""{"name":"Support copy","description":"A copy."}""", handler.Requests[4].Body);
+    }
+
+    [Fact]
+    public async Task DeletesATeamRoleWithAnOptionalReplacementRole()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(200, new { message = "Role deleted." }));
+        MessageResponse deleted = await client.Team.DeleteRoleAsync("role/1");
+        Assert.Equal("Role deleted.", deleted.Message);
+        await client.Team.DeleteRoleAsync("role/1", new DeleteTeamRoleQuery());
+        await client.Team.DeleteRoleAsync("role/1", new DeleteTeamRoleQuery { ReplacementRoleId = "role_2" });
+        Assert.All(handler.Requests, request =>
+        {
+            Assert.Equal("DELETE", request.Method);
+            Assert.Equal("https://api.lettermint.co/v1/team/roles/role%2F1", request.Url.GetLeftPart(UriPartial.Path));
+            Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+            Assert.Null(request.Body);
+            Assert.Null(request.Header("Content-Type"));
+        });
+        Assert.Equal("https://api.lettermint.co/v1/team/roles/role%2F1", handler.Requests[0].Url.AbsoluteUri);
+        Assert.Equal("https://api.lettermint.co/v1/team/roles/role%2F1", handler.Requests[1].Url.AbsoluteUri);
+        Assert.Equal(new Dictionary<string, string> { ["replacement_role_id"] = "role_2" }, handler.Requests[2].QueryMap);
+    }
+
+    [Fact]
+    public async Task TeamRolesNeedTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.DeleteRoleAsync("r"));
+        Assert.Equal("Team.DeleteRoleAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ARejectedTeamRoleChangeThrowsAConflictException()
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(409, new { error = new { code = "built_in_role_immutable", message = "Built-in roles cannot be changed." } }));
+        LettermintApiException error = await Assert.ThrowsAsync<ConflictException>(() => client.Team.UpdateRoleAsync("role_owner", new UpdateTeamRoleData { Name = "Owner", Permissions = [] }));
+        Assert.Equal(HttpStatusCode.Conflict, error.StatusCode);
+        Assert.Equal(RbacConflictCode.BuiltInRoleImmutable.ToString(), error.Code);
+        Assert.Equal("Built-in roles cannot be changed.", error.Message);
+        await Assert.ThrowsAsync<ConflictException>(() => client.Team.DeleteRoleAsync("role_owner"));
+        await Assert.ThrowsAsync<ConflictException>(() => client.Team.CreateRoleAsync(new CreateTeamRoleData { Name = "Support", Permissions = [] }));
+    }
+
     [Fact]
     public async Task KeepsTheWebhookBasicAuthState()
     {
@@ -711,6 +835,14 @@ public class TeamApiTests
         Assert.StartsWith("Team.Invites.UpdateAsync: inviteId", updateInvite.Message);
         var revokeInvite = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.RevokeAsync(id!));
         Assert.StartsWith("Team.Invites.RevokeAsync: inviteId", revokeInvite.Message);
+        var role = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.RetrieveRoleAsync(id!));
+        Assert.StartsWith("Team.RetrieveRoleAsync: roleId", role.Message);
+        var updateRole = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.UpdateRoleAsync(id!, new UpdateTeamRoleData { Name = "n", Permissions = [] }));
+        Assert.StartsWith("Team.UpdateRoleAsync: roleId", updateRole.Message);
+        var deleteRole = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.DeleteRoleAsync(id!, new DeleteTeamRoleQuery { ReplacementRoleId = "r" }));
+        Assert.StartsWith("Team.DeleteRoleAsync: roleId", deleteRole.Message);
+        var duplicateRole = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.DuplicateRoleAsync(id!, new DuplicateTeamRoleData { Name = "n" }));
+        Assert.StartsWith("Team.DuplicateRoleAsync: roleId", duplicateRole.Message);
         Assert.Empty(handler.Requests);
     }
 }
