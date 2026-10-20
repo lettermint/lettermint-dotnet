@@ -282,13 +282,24 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Stats` | `RetrieveAsync` |
 | `Suppressions` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
 | `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync`, `RetrieveRoleAsync`, `CreateRoleAsync`, `UpdateRoleAsync`, `DeleteRoleAsync`, `DuplicateRoleAsync` |
-| `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync` |
+| `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync`, `RemoveAsync` |
 | `Team.Invites` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `CreateAsync`, `UpdateAsync`, `RevokeAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
 
 `Webhooks.Deliveries.RetryAsync(webhookId, deliveryId)` sends a delivery's original payload to the webhook again now. The retry counts as a delivery attempt; if it fails with a retryable error, automatic retries continue.
+
+`Team.Members.RemoveAsync(userId)` removes a member from the team; the Owner cannot be removed. `FilterProjectId` on `ListTeamMembersQuery` lists only the members who can access that project: members with access to all projects and members selected for it. An unknown project returns an empty list:
+
+```csharp
+await foreach (var member in lettermint.Team.Members.IterateAsync(new ListTeamMembersQuery { FilterProjectId = "project-id" }))
+{
+    Console.WriteLine($"{member.Email} {member.Role.Name}");
+}
+
+await lettermint.Team.Members.RemoveAsync("user-id");
+```
 
 `Team.Invites.CreateAsync` invites a person to the team and sends the invitation email. The team needs a free seat on its plan, and the Owner role cannot be assigned through an invite. `UpdateAsync` replaces the email, role and project access of a pending invite and sends a new email only when the address changes; `RevokeAsync` revokes it:
 

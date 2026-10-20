@@ -49,7 +49,7 @@ public sealed class TeamMembers : ApiResource
     {
     }
 
-    /// <summary>Lists team members, one page at a time.</summary>
+    /// <summary>Lists team members, one page at a time. <c>FilterProjectId</c> keeps only the members who can access that project.</summary>
     public Task<ListTeamMembersResponse> ListAsync(ListTeamMembersQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.ListTeamMembers, "Team.Members.ListAsync", [], query, default, options, cancellationToken);
 
@@ -64,6 +64,10 @@ public sealed class TeamMembers : ApiResource
     /// <summary>Changes a member's role and project access.</summary>
     public Task<TeamMemberData> UpdateAssignmentAsync(string userId, UpdateTeamMemberAssignmentData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.UpdateTeamMemberAssignment, "Team.Members.UpdateAssignmentAsync", [userId], default, body, options, cancellationToken);
+
+    /// <summary>Removes a member from the team. The Owner cannot be removed.</summary>
+    public Task<MessageResponse> RemoveAsync(string userId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DeleteTeamMember, "Team.Members.RemoveAsync", [userId], default, default, options, cancellationToken);
 }
 
 /// <summary>Pending team invites. Needs the team token.</summary>
