@@ -66,6 +66,42 @@ public sealed class TeamMembers : ApiResource
         => Transport.CallAsync(Operations.UpdateTeamMemberAssignment, "Team.Members.UpdateAssignmentAsync", [userId], default, body, options, cancellationToken);
 }
 
+/// <summary>Pending team invites. Needs the team token.</summary>
+public sealed class TeamInvites : ApiResource
+{
+    internal TeamInvites(Transport transport)
+        : base(transport)
+    {
+    }
+
+    /// <summary>Lists pending invites with the role and project access they will receive, one page at a time.</summary>
+    public Task<ListTeamInvitesResponse> ListAsync(ListTeamInvitesQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.ListTeamInvites, "Team.Invites.ListAsync", [], query, default, options, cancellationToken);
+
+    /// <summary>Iterates over every pending invite, following <c>next_cursor</c>.</summary>
+    public IAsyncEnumerable<TeamInviteData> IterateAsync(ListTeamInvitesQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.PaginateAsync<ListTeamInvitesQuery, ListTeamInvitesResponse, TeamInviteData>(Operations.ListTeamInvites, "Team.Invites.IterateAsync", [], query, options, cancellationToken);
+
+    /// <summary>Retrieves a pending invite.</summary>
+    public Task<TeamInviteData> RetrieveAsync(string inviteId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.GetTeamInvite, "Team.Invites.RetrieveAsync", [inviteId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Invites a person to the team and sends the invitation email. The team needs a free seat on its plan;
+    /// pending invites do not use one. The Owner role cannot be assigned through an invite.
+    /// </summary>
+    public Task<TeamInviteData> CreateAsync(CreateTeamInviteData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.CreateTeamInvite, "Team.Invites.CreateAsync", [], default, body, options, cancellationToken);
+
+    /// <summary>Replaces the email, role and project access of a pending invite. A new email is sent only when the address changes.</summary>
+    public Task<TeamInviteData> UpdateAsync(string inviteId, UpdateTeamInviteData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.UpdateTeamInvite, "Team.Invites.UpdateAsync", [inviteId], default, body, options, cancellationToken);
+
+    /// <summary>Revokes a pending invite.</summary>
+    public Task<MessageResponse> RevokeAsync(string inviteId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DeleteTeamInvite, "Team.Invites.RevokeAsync", [inviteId], default, default, options, cancellationToken);
+}
+
 /// <summary>The team of the token. Needs the team token.</summary>
 public sealed class Team : ApiResource
 {
@@ -73,10 +109,14 @@ public sealed class Team : ApiResource
         : base(transport)
     {
         Members = new TeamMembers(transport);
+        Invites = new TeamInvites(transport);
     }
 
     /// <summary>Team members.</summary>
     public TeamMembers Members { get; }
+
+    /// <summary>Pending team invites.</summary>
+    public TeamInvites Invites { get; }
 
     /// <summary>Retrieves the team. <c>Include</c> adds features or add-ons.</summary>
     public Task<TeamData> RetrieveAsync(GetTeamQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)

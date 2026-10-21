@@ -18,9 +18,24 @@ public class TeamApiTests
         ["userId"] = "user/id",
         ["webhookId"] = "webhook_1",
         ["deliveryId"] = "delivery_1",
+        ["inviteId"] = "invite/1",
     };
 
     private static string Id(string name) => Ids[name];
+
+    /// <summary>
+    /// Operations in the generated table that have no SDK method yet: added by the next PRs in this stack.
+    /// Every other operation is checked strictly.
+    /// </summary>
+    private static readonly string[] Pending =
+    [
+        "DELETE /team/members/{userId}",
+        "DELETE /team/roles/{roleId}",
+        "GET /team/roles/{roleId}",
+        "POST /team/roles",
+        "POST /team/roles/{roleId}/duplicate",
+        "PUT /team/roles/{roleId}",
+    ];
 
     /// <summary>Every operation of the API, called through its public SDK method.</summary>
     private static readonly Dictionary<string, Func<LettermintClient, Task>> Calls = new()
@@ -29,6 +44,7 @@ public class TeamApiTests
         ["DELETE /projects/{projectId}"] = l => l.Projects.DeleteAsync(Id("projectId")),
         ["DELETE /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.DeleteAsync(Id("projectId")),
         ["DELETE /routes/{routeId}"] = l => l.Routes.DeleteAsync(Id("routeId")),
+        ["DELETE /team/invites/{inviteId}"] = l => l.Team.Invites.RevokeAsync(Id("inviteId")),
         ["DELETE /suppressions/{suppressionId}"] = l => l.Suppressions.DeleteAsync(Id("suppressionId")),
         ["DELETE /webhooks/{webhookId}"] = l => l.Webhooks.DeleteAsync(Id("webhookId")),
         ["GET /blocked-file-types"] = l => l.BlockedFileTypesAsync(),
@@ -49,6 +65,8 @@ public class TeamApiTests
         ["GET /stats"] = l => l.Stats.RetrieveAsync(new GetStatsQuery { From = "2026-01-01", To = "2026-01-31" }),
         ["GET /suppressions"] = l => l.Suppressions.ListAsync(),
         ["GET /team"] = l => l.Team.RetrieveAsync(),
+        ["GET /team/invites"] = l => l.Team.Invites.ListAsync(),
+        ["GET /team/invites/{inviteId}"] = l => l.Team.Invites.RetrieveAsync(Id("inviteId")),
         ["GET /team/members"] = l => l.Team.Members.ListAsync(),
         ["GET /team/members/{userId}"] = l => l.Team.Members.RetrieveAsync(Id("userId")),
         ["GET /team/roles"] = l => l.Team.RolesAsync(),
@@ -74,6 +92,7 @@ public class TeamApiTests
         ["POST /send"] = l => l.Emails.SendAsync(Fake.Message()),
         ["POST /send/batch"] = l => l.Emails.SendBatchAsync([Fake.Message()]),
         ["POST /suppressions"] = l => l.Suppressions.CreateAsync(new StoreSuppressionData { Reason = SuppressionCreateReason.Manual, Scope = SuppressionCreateScope.Team, Emails = new[] { "blocked@example.test" } }),
+        ["POST /team/invites"] = l => l.Team.Invites.CreateAsync(new CreateTeamInviteData { Email = "jane@example.test", RoleId = "role_1", ProjectAccess = new CreateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["POST /webhooks"] = l => l.Webhooks.CreateAsync(new StoreWebhookData { Name = "Hook", Url = "https://example.test/hook", Events = [WebhookEvent.MessageSent] }),
         ["POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry"] = l => l.Webhooks.Deliveries.RetryAsync(Id("webhookId"), Id("deliveryId")),
         ["POST /webhooks/{webhookId}/regenerate-secret"] = l => l.Webhooks.RegenerateSecretAsync(Id("webhookId")),
@@ -83,17 +102,19 @@ public class TeamApiTests
         ["PUT /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.UpdateAsync(Id("projectId"), new ReportForwardingRequest { Destination = "reports@example.test" }),
         ["PUT /routes/{routeId}"] = l => l.Routes.UpdateAsync(Id("routeId"), new UpdateRouteData { Name = "Renamed" }),
         ["PUT /team"] = l => l.Team.UpdateAsync(new UpdateTeamData { Name = "Acme" }),
+        ["PUT /team/invites/{inviteId}"] = l => l.Team.Invites.UpdateAsync(Id("inviteId"), new UpdateTeamInviteData { Email = "jane@example.test", RoleId = "role_1", ProjectAccess = new UpdateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["PUT /team/members/{userId}/assignment"] = l => l.Team.Members.UpdateAssignmentAsync(Id("userId"), new UpdateTeamMemberAssignmentData { RoleId = "role_1", ProjectAccess = new UpdateTeamMemberAssignmentDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["PUT /webhooks/{webhookId}"] = l => l.Webhooks.UpdateAsync(Id("webhookId"), new UpdateWebhookData { BasicAuth = null }),
     };
 
-    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Order());
+    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Except(Pending).Order());
 
     [Fact]
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
-        Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
-        Assert.Equal(60, Operations.All.Count);
+        Assert.Equal(Operations.All.Keys.Except(Pending).Order(), Calls.Keys.Order());
+        Assert.All(Pending, key => Assert.Contains(key, Operations.All.Keys));
+        Assert.Equal(71, Operations.All.Count);
     }
 
     private static HttpResponseMessage ResponseFor(OperationDefinition operation) => operation.ResponseKind switch
@@ -159,6 +180,7 @@ public class TeamApiTests
             [typeof(Suppressions)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
             [typeof(Team)] = ["RetrieveAsync", "RolesAsync", "UpdateAsync", "UsageAsync"],
             [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
+            [typeof(TeamInvites)] = ["CreateAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RevokeAsync", "UpdateAsync"],
             [typeof(Webhooks)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RegenerateSecretAsync", "RetrieveAsync", "TestAsync", "UpdateAsync"],
             [typeof(WebhookDeliveries)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "RetryAsync"],
         };
@@ -173,6 +195,7 @@ public class TeamApiTests
         }
         Assert.Equal(typeof(ReportForwarding), typeof(Projects).GetProperty("ReportForwarding")!.PropertyType);
         Assert.Equal(typeof(TeamMembers), typeof(Team).GetProperty("Members")!.PropertyType);
+        Assert.Equal(typeof(TeamInvites), typeof(Team).GetProperty("Invites")!.PropertyType);
         Assert.Equal(typeof(WebhookDeliveries), typeof(Webhooks).GetProperty("Deliveries")!.PropertyType);
     }
 
@@ -347,6 +370,117 @@ public class TeamApiTests
         Assert.Equal(next, Assert.Single(list.Data).NextRetryAt);
     }
 
+    private static object InviteJson(string id = "invite_1") => new
+    {
+        id,
+        email = "jane@example.test",
+        role = new { id = "role_1", name = "Developer" },
+        project_access = new { scope = "selected", projects = new[] { new { id = "project_1", name = "Production" } } },
+        created_at = "2026-10-20T09:00:00Z",
+    };
+
+    [Fact]
+    public async Task ListsAndRetrievesTeamInvites()
+    {
+        var (client, handler) = Fake.Client((request, _) => request.Url.AbsolutePath.EndsWith("/invites")
+            ? Fake.Json(200, new { data = new[] { InviteJson() }, next_cursor = "c2" })
+            : Fake.Json(200, InviteJson()));
+        ListTeamInvitesResponse page = await client.Team.Invites.ListAsync(new ListTeamInvitesQuery { PageSize = 10, PageCursor = "c1" });
+        var listed = Assert.Single(page.Data);
+        Assert.Equal("c2", page.NextCursor);
+        Assert.Equal("invite_1", listed.Id);
+        Assert.Equal("jane@example.test", listed.Email);
+        Assert.Equal("Developer", listed.Role.Name);
+        Assert.Equal(ProjectAccessScope.Selected, listed.ProjectAccess.Scope);
+        Assert.Equal("Production", Assert.Single(listed.ProjectAccess.Projects).Name);
+        Assert.Equal("2026-10-20T09:00:00Z", listed.CreatedAt);
+        var list = handler.Requests[0];
+        Assert.Equal("GET", list.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/invites", list.Url.GetLeftPart(UriPartial.Path));
+        Assert.Equal(new Dictionary<string, string> { ["page[size]"] = "10", ["page[cursor]"] = "c1" }, list.QueryMap);
+        Assert.Equal("Bearer " + Fake.TeamToken, list.Header("Authorization"));
+        Assert.Null(list.Header("x-lettermint-token"));
+
+        TeamInviteData invite = await client.Team.Invites.RetrieveAsync("invite/1");
+        Assert.Equal("role_1", invite.Role.Id);
+        var retrieve = handler.Requests[1];
+        Assert.Equal("GET", retrieve.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/invites/invite%2F1", retrieve.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, retrieve.Header("Authorization"));
+        Assert.Null(retrieve.Body);
+    }
+
+    [Fact]
+    public async Task CreatesUpdatesAndRevokesTeamInvites()
+    {
+        var (client, handler) = Fake.Client((request, _) => request.Method switch
+        {
+            "POST" => Fake.Json(201, InviteJson()),
+            "DELETE" => Fake.Json(200, new { message = "Invite revoked." }),
+            _ => Fake.Json(200, InviteJson()),
+        });
+        var created = await client.Team.Invites.CreateAsync(new CreateTeamInviteData
+        {
+            Email = "jane@example.test",
+            RoleId = "role_1",
+            ProjectAccess = new CreateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.Selected, ProjectIds = ["project_1"] },
+        });
+        Assert.Equal("invite_1", created.Id);
+        var create = handler.Requests[0];
+        Assert.Equal("POST", create.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/invites", create.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, create.Header("Authorization"));
+        Assert.Equal("application/json", create.Header("Content-Type"));
+        Assert.Null(create.Header("Idempotency-Key"));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"email":"jane@example.test","role_id":"role_1","project_access":{"scope":"selected","project_ids":["project_1"]}}"""), create.Json), create.Body);
+
+        var updated = await client.Team.Invites.UpdateAsync("invite/1", new UpdateTeamInviteData
+        {
+            Email = "john@example.test",
+            RoleId = "role_2",
+            ProjectAccess = new UpdateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All },
+        });
+        Assert.Equal("jane@example.test", updated.Email);
+        var update = handler.Requests[1];
+        Assert.Equal("PUT", update.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/invites/invite%2F1", update.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, update.Header("Authorization"));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"email":"john@example.test","role_id":"role_2","project_access":{"scope":"all"}}"""), update.Json), update.Body);
+
+        MessageResponse revoked = await client.Team.Invites.RevokeAsync("invite/1");
+        Assert.Equal("Invite revoked.", revoked.Message);
+        var revoke = handler.Requests[2];
+        Assert.Equal("DELETE", revoke.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/invites/invite%2F1", revoke.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, revoke.Header("Authorization"));
+        Assert.Null(revoke.Body);
+        Assert.Null(revoke.Header("Content-Type"));
+    }
+
+    [Fact]
+    public async Task TeamInvitesNeedTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.ListAsync());
+        Assert.Equal("Team.Invites.ListAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ARejectedTeamInviteThrowsConflictAndValidationExceptions()
+    {
+        var (conflict, _) = Fake.Client((_, _) => Fake.Json(409, new { error = new { code = "stale_resource", message = "The invite changed." } }));
+        LettermintApiException error = await Assert.ThrowsAsync<ConflictException>(() => conflict.Team.Invites.UpdateAsync("i", new UpdateTeamInviteData { Email = "e@example.test", RoleId = "r", ProjectAccess = new() { Scope = ProjectAccessScope.All } }));
+        Assert.Equal(HttpStatusCode.Conflict, error.StatusCode);
+        Assert.Equal(RbacConflictCode.StaleResource.ToString(), error.Code);
+        Assert.Equal("The invite changed.", error.Message);
+
+        var (invalid, _) = Fake.Client((_, _) => Fake.Json(422, new { message = "The email field must be a valid email address.", errors = new { email = new[] { "The email field must be a valid email address." } } }));
+        var validation = await Assert.ThrowsAsync<ValidationException>(() => invalid.Team.Invites.CreateAsync(new CreateTeamInviteData { Email = "nope", RoleId = "r", ProjectAccess = new() { Scope = ProjectAccessScope.All } }));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, validation.StatusCode);
+        Assert.Equal(["The email field must be a valid email address."], validation.Errors!["email"]);
+    }
+
     [Fact]
     public async Task KeepsTheWebhookBasicAuthState()
     {
@@ -495,7 +629,7 @@ public class TeamApiTests
         Assert.Equal("cursor", Operations.ListWebhookDeliveries.Definition.Pagination!.CursorParam);
     }
 
-    public static TheoryData<string> Iterators => new("domains", "messages", "message events", "projects", "routes", "suppressions", "team members", "webhooks", "webhook deliveries");
+    public static TheoryData<string> Iterators => new("domains", "messages", "message events", "projects", "routes", "suppressions", "team invites", "team members", "webhooks", "webhook deliveries");
 
     private static IAsyncEnumerable<object> Iterate(LettermintClient client, string name) => name switch
     {
@@ -505,6 +639,7 @@ public class TeamApiTests
         "projects" => client.Projects.IterateAsync(),
         "routes" => client.Routes.IterateAsync("p"),
         "suppressions" => client.Suppressions.IterateAsync(),
+        "team invites" => client.Team.Invites.IterateAsync(),
         "team members" => client.Team.Members.IterateAsync(),
         "webhooks" => client.Webhooks.IterateAsync(),
         _ => client.Webhooks.Deliveries.IterateAsync("w"),
@@ -570,6 +705,12 @@ public class TeamApiTests
         Assert.StartsWith("Webhooks.Deliveries.RetryAsync: webhookId", retryWebhook.Message);
         var retryDelivery = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Webhooks.Deliveries.RetryAsync("w", id!));
         Assert.StartsWith("Webhooks.Deliveries.RetryAsync: deliveryId", retryDelivery.Message);
+        var invite = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.RetrieveAsync(id!));
+        Assert.StartsWith("Team.Invites.RetrieveAsync: inviteId", invite.Message);
+        var updateInvite = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.UpdateAsync(id!, new UpdateTeamInviteData { Email = "e", RoleId = "r", ProjectAccess = new() { Scope = ProjectAccessScope.All } }));
+        Assert.StartsWith("Team.Invites.UpdateAsync: inviteId", updateInvite.Message);
+        var revokeInvite = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.RevokeAsync(id!));
+        Assert.StartsWith("Team.Invites.RevokeAsync: inviteId", revokeInvite.Message);
         Assert.Empty(handler.Requests);
     }
 }

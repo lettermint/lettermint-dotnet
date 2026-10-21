@@ -283,11 +283,30 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Suppressions` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
 | `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync` |
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync` |
+| `Team.Invites` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `CreateAsync`, `UpdateAsync`, `RevokeAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
 
 `Webhooks.Deliveries.RetryAsync(webhookId, deliveryId)` sends a delivery's original payload to the webhook again now. The retry counts as a delivery attempt; if it fails with a retryable error, automatic retries continue.
+
+`Team.Invites.CreateAsync` invites a person to the team and sends the invitation email. The team needs a free seat on its plan, and the Owner role cannot be assigned through an invite. `UpdateAsync` replaces the email, role and project access of a pending invite and sends a new email only when the address changes; `RevokeAsync` revokes it:
+
+```csharp
+var invite = await lettermint.Team.Invites.CreateAsync(new CreateTeamInviteData
+{
+    Email = "jane@example.com",
+    RoleId = "role-id",
+    ProjectAccess = new CreateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.Selected, ProjectIds = ["project-id"] },
+});
+
+await foreach (var pending in lettermint.Team.Invites.IterateAsync())
+{
+    Console.WriteLine($"{pending.Email} {pending.Role.Name}");
+}
+
+await lettermint.Team.Invites.RevokeAsync(invite.Id);
+```
 
 ### Query parameters and pagination
 
