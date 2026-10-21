@@ -24,15 +24,6 @@ public class TeamApiTests
 
     private static string Id(string name) => Ids[name];
 
-    /// <summary>
-    /// Operations in the generated table that have no SDK method yet: added by the next PRs in this stack.
-    /// Every other operation is checked strictly.
-    /// </summary>
-    private static readonly string[] Pending =
-    [
-        "DELETE /team/members/{userId}",
-    ];
-
     /// <summary>Every operation of the API, called through its public SDK method.</summary>
     private static readonly Dictionary<string, Func<LettermintClient, Task>> Calls = new()
     {
@@ -42,6 +33,7 @@ public class TeamApiTests
         ["DELETE /routes/{routeId}"] = l => l.Routes.DeleteAsync(Id("routeId")),
         ["DELETE /team/invites/{inviteId}"] = l => l.Team.Invites.RevokeAsync(Id("inviteId")),
         ["DELETE /team/roles/{roleId}"] = l => l.Team.DeleteRoleAsync(Id("roleId")),
+        ["DELETE /team/members/{userId}"] = l => l.Team.Members.RemoveAsync(Id("userId")),
         ["DELETE /suppressions/{suppressionId}"] = l => l.Suppressions.DeleteAsync(Id("suppressionId")),
         ["DELETE /webhooks/{webhookId}"] = l => l.Webhooks.DeleteAsync(Id("webhookId")),
         ["GET /blocked-file-types"] = l => l.BlockedFileTypesAsync(),
@@ -108,13 +100,12 @@ public class TeamApiTests
         ["PUT /webhooks/{webhookId}"] = l => l.Webhooks.UpdateAsync(Id("webhookId"), new UpdateWebhookData { BasicAuth = null }),
     };
 
-    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Except(Pending).Order());
+    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Order());
 
     [Fact]
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
-        Assert.Equal(Operations.All.Keys.Except(Pending).Order(), Calls.Keys.Order());
-        Assert.All(Pending, key => Assert.Contains(key, Operations.All.Keys));
+        Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
         Assert.Equal(71, Operations.All.Count);
     }
 
@@ -180,7 +171,7 @@ public class TeamApiTests
             [typeof(Stats)] = ["RetrieveAsync"],
             [typeof(Suppressions)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
             [typeof(Team)] = ["CreateRoleAsync", "DeleteRoleAsync", "DuplicateRoleAsync", "RetrieveAsync", "RetrieveRoleAsync", "RolesAsync", "UpdateAsync", "UpdateRoleAsync", "UsageAsync"],
-            [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
+            [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RemoveAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
             [typeof(TeamInvites)] = ["CreateAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RevokeAsync", "UpdateAsync"],
             [typeof(Webhooks)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RegenerateSecretAsync", "RetrieveAsync", "TestAsync", "UpdateAsync"],
             [typeof(WebhookDeliveries)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "RetryAsync"],
@@ -606,6 +597,63 @@ public class TeamApiTests
     }
 
     [Fact]
+    public async Task RemovesATeamMember()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(200, new { message = "Member removed." }));
+        MessageResponse removed = await client.Team.Members.RemoveAsync("user/id");
+        Assert.Equal("Member removed.", removed.Message);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("DELETE", request.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/members/user%2Fid", request.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+        Assert.Null(request.Header("x-lettermint-token"));
+        Assert.Null(request.Header("Idempotency-Key"));
+        Assert.Null(request.Header("Content-Type"));
+        Assert.Null(request.Body);
+    }
+
+    [Fact]
+    public async Task RemovingATeamMemberNeedsTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Members.RemoveAsync("u"));
+        Assert.Equal("Team.Members.RemoveAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task RemovingTheOwnerThrowsAConflictException()
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(409, new { error = new { code = "owner_protected", message = "The Owner cannot be removed." } }));
+        LettermintApiException error = await Assert.ThrowsAsync<ConflictException>(() => client.Team.Members.RemoveAsync("owner"));
+        Assert.Equal(HttpStatusCode.Conflict, error.StatusCode);
+        Assert.Equal(RbacConflictCode.OwnerProtected.ToString(), error.Code);
+        Assert.Equal("The Owner cannot be removed.", error.Message);
+        var (missing, _) = Fake.Client((_, _) => Fake.Json(404, new { message = "Not found." }));
+        await Assert.ThrowsAsync<NotFoundException>(() => missing.Team.Members.RemoveAsync("gone"));
+    }
+
+    [Fact]
+    public async Task FiltersTeamMembersByProject()
+    {
+        var (client, handler) = Fake.Client((_, index) => Fake.Json(200, index == 1
+            ? new { data = new[] { new { id = "u1" } }, next_cursor = (string?)"c2" }
+            : new { data = Array.Empty<object>(), next_cursor = (string?)null }));
+        await client.Team.Members.ListAsync(new ListTeamMembersQuery { FilterProjectId = "0f9c2c4e-7d0a-4b8e-9a51-3c1b2d4e5f60", PageSize = 25 });
+        Assert.Equal(new Dictionary<string, string> { ["page[size]"] = "25", ["filter[project_id]"] = "0f9c2c4e-7d0a-4b8e-9a51-3c1b2d4e5f60" }, handler.Requests[0].QueryMap);
+        var ids = new List<string>();
+        await foreach (var member in client.Team.Members.IterateAsync(new ListTeamMembersQuery { FilterProjectId = "project_1" }))
+        {
+            ids.Add(member.Id);
+        }
+        Assert.Equal(["u1"], ids);
+        Assert.Equal(new Dictionary<string, string> { ["filter[project_id]"] = "project_1" }, handler.Requests[1].QueryMap);
+        Assert.Equal(new Dictionary<string, string> { ["filter[project_id]"] = "project_1", ["page[cursor]"] = "c2" }, handler.Requests[2].QueryMap);
+        await client.Team.Members.ListAsync();
+        Assert.Empty(handler.Requests[3].Query);
+    }
+
+    [Fact]
     public async Task KeepsTheWebhookBasicAuthState()
     {
         var (client, handler) = Fake.Client((_, _) => Fake.Json(200, new { data = new { has_basic_auth = true } }));
@@ -835,6 +883,8 @@ public class TeamApiTests
         Assert.StartsWith("Team.Invites.UpdateAsync: inviteId", updateInvite.Message);
         var revokeInvite = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Invites.RevokeAsync(id!));
         Assert.StartsWith("Team.Invites.RevokeAsync: inviteId", revokeInvite.Message);
+        var removeMember = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.Members.RemoveAsync(id!));
+        Assert.StartsWith("Team.Members.RemoveAsync: userId", removeMember.Message);
         var role = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.RetrieveRoleAsync(id!));
         Assert.StartsWith("Team.RetrieveRoleAsync: roleId", role.Message);
         var updateRole = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.UpdateRoleAsync(id!, new UpdateTeamRoleData { Name = "n", Permissions = [] }));
