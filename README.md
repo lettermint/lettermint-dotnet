@@ -281,7 +281,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Routes` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyInboundDomainAsync` |
 | `Stats` | `RetrieveAsync` |
 | `Suppressions` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
-| `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync` |
+| `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync`, `RetrieveRoleAsync`, `CreateRoleAsync`, `UpdateRoleAsync`, `DeleteRoleAsync`, `DuplicateRoleAsync` |
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync` |
 | `Team.Invites` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `CreateAsync`, `UpdateAsync`, `RevokeAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
@@ -306,6 +306,20 @@ await foreach (var pending in lettermint.Team.Invites.IterateAsync())
 }
 
 await lettermint.Team.Invites.RevokeAsync(invite.Id);
+```
+
+`Team.CreateRoleAsync` creates a custom role; it needs a plan with custom roles, and the permissions must include the permissions they depend on. `UpdateRoleAsync` replaces a custom role's name, description and permissions, and `DuplicateRoleAsync` copies a role under a new name. Built-in roles cannot be changed or deleted. A role that is still assigned to members, invites or SCIM groups can only be deleted with a replacement role, which receives those assignments:
+
+```csharp
+var role = await lettermint.Team.CreateRoleAsync(new CreateTeamRoleData
+{
+    Name = "Support",
+    Description = "Reads members and domains.",
+    Permissions = [RbacPermission.MembersRead, RbacPermission.DomainsRead],
+});
+
+var copy = await lettermint.Team.DuplicateRoleAsync(role.Id, new DuplicateTeamRoleData { Name = "Support (EU)" });
+await lettermint.Team.DeleteRoleAsync(role.Id, new DeleteTeamRoleQuery { ReplacementRoleId = copy.Id });
 ```
 
 ### Query parameters and pagination
