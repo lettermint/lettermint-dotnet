@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.2.0 - 2026-10-23
+
+### What's Changed
+
+* Bump xunit.runner.visualstudio from 4.0.0 to 4.0.1 by @dependabot[bot] in https://github.com/lettermint/lettermint-dotnet/pull/19
+* Bump Microsoft.NET.Test.Sdk from 18.10.1 to 18.11.0 by @dependabot[bot] in https://github.com/lettermint/lettermint-dotnet/pull/18
+* feat: add messages resend by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/20
+* feat: add per-email idempotency keys to batch send by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/21
+* chore(deps): bump actions/create-github-app-token from 3.2.0 to 3.3.0 by @dependabot[bot] in https://github.com/lettermint/lettermint-dotnet/pull/24
+* feat: add webhook delivery retry by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/23
+* feat: add team invites by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/25
+* feat: add team role management by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/26
+* feat: add team member removal and a project filter for the member list by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/27
+
+**Full Changelog**: https://github.com/lettermint/lettermint-dotnet/compare/v2.1.0...v2.2.0
+
 ## v2.1.0 - 2026-10-11
 
 ### What's Changed
