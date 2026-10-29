@@ -129,6 +129,11 @@ public class TypesTests
         Assert.Contains("Token = [redacted]", projectToken.Data.ToString());
         Assert.Contains("Name = Production", projectToken.Data.ToString());
         Assert.Equal("lm_secretApiToken456", projectToken.Data.Token);
+        var teamToken = JsonSerializer.Deserialize<TeamApiTokenCreatedResponse>("""{"data":{"id":"t","name":"Terraform","abilities":["*"],"allowed_ips":[],"created_via":"api","expires_at":null,"last_used_at":null,"created_at":"2026-10-20T09:00:00Z","token":"lm_team_secretApiToken789"},"message":"Token created."}""", LettermintJson.Options)!;
+        Assert.DoesNotContain("lm_team_secretApiToken789", teamToken.ToString());
+        Assert.Contains("Token = [redacted]", teamToken.Data.ToString());
+        Assert.Contains("Name = Terraform", teamToken.Data.ToString());
+        Assert.Equal("lm_team_secretApiToken789", teamToken.Data.Token);
         var secret = new WebhookBasicAuthData { Username = "user", Password = "hunter2" };
         Assert.DoesNotContain("hunter2", secret.ToString());
         Assert.DoesNotContain("hunter2", new UpdateWebhookData { BasicAuth = secret }.ToString());
