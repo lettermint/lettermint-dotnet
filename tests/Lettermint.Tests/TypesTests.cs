@@ -124,6 +124,11 @@ public class TypesTests
         Assert.Contains("Message = Project created", created.ToString());
         Assert.Contains("Name = Production", created.ToString());
         Assert.Equal("lm_secretProjectToken123", created.ApiToken);
+        var projectToken = JsonSerializer.Deserialize<ProjectApiTokenCreatedResponse>("""{"data":{"id":"t","project_id":"p","name":"Production","short_token":false,"created_via":"api","allowed_ips":[],"last_used_at":null,"created_at":"2026-10-20T09:00:00Z","token":"lm_secretApiToken456"},"smtp":null,"message":"Token created."}""", LettermintJson.Options)!;
+        Assert.DoesNotContain("lm_secretApiToken456", projectToken.ToString());
+        Assert.Contains("Token = [redacted]", projectToken.Data.ToString());
+        Assert.Contains("Name = Production", projectToken.Data.ToString());
+        Assert.Equal("lm_secretApiToken456", projectToken.Data.Token);
         var secret = new WebhookBasicAuthData { Username = "user", Password = "hunter2" };
         Assert.DoesNotContain("hunter2", secret.ToString());
         Assert.DoesNotContain("hunter2", new UpdateWebhookData { BasicAuth = secret }.ToString());

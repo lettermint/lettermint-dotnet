@@ -277,6 +277,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Domains` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `DeleteAsync`, `VerifyDnsRecordsAsync`, `VerifyDnsRecordAsync`, `UpdateProjectsAsync` |
 | `Messages` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `EventsAsync`, `IterateEventsAsync`, `SourceAsync`, `HtmlAsync`, `TextAsync`, `RescheduleAsync`, `CancelAsync`, `ResendAsync`, `ProcessAsync` |
 | `Projects` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `RotateTokenAsync` |
+| `Projects.ApiTokens` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `DeleteAsync(projectId, tokenId)` |
 | `Projects.ReportForwarding` | `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyAsync`, `ResendCodeAsync` |
 | `Routes` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyInboundDomainAsync` |
 | `Stats` | `RetrieveAsync` |
@@ -289,6 +290,20 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
 
 `Webhooks.Deliveries.RetryAsync(webhookId, deliveryId)` sends a delivery's original payload to the webhook again now. The retry counts as a delivery attempt; if it fails with a retryable error, automatic retries continue.
+
+`Projects.ApiTokens.CreateAsync(projectId, …)` creates a project API token. The token is only returned once: use it to send through the API, or as the SMTP password when SMTP is enabled for the project (`Smtp` then holds the host, ports and username). `ListAsync` and `IterateAsync` return the tokens without their values, and `DeleteAsync` makes a token stop working immediately:
+
+```csharp
+var created = await lettermint.Projects.ApiTokens.CreateAsync("project-id", new StoreProjectApiTokenData { Name = "Production" });
+var token = created.Data.Token; // store it now; it is only returned once
+
+await foreach (var apiToken in lettermint.Projects.ApiTokens.IterateAsync("project-id"))
+{
+    Console.WriteLine($"{apiToken.Name} {apiToken.LastUsedAt}");
+}
+
+await lettermint.Projects.ApiTokens.DeleteAsync("project-id", created.Data.Id);
+```
 
 `Team.Members.RemoveAsync(userId)` removes a member from the team; the Owner cannot be removed. `FilterProjectId` on `ListTeamMembersQuery` lists only the members who can access that project: members with access to all projects and members selected for it. An unknown project returns an empty list:
 
@@ -467,7 +482,7 @@ catch (LettermintApiException error)
 }
 ```
 
-Exceptions never contain request headers or tokens. `ToString()`, the debugger and JSON serialization of the client, its sub-clients, the options, builders and the webhook verifier show no tokens or secrets; `ToString()` of records that hold a secret returned by the API (such as `ProjectCreatedData.ApiToken`) shows `[redacted]`.
+Exceptions never contain request headers or tokens. `ToString()`, the debugger and JSON serialization of the client, its sub-clients, the options, builders and the webhook verifier show no tokens or secrets; `ToString()` of records that hold a secret returned by the API (such as `ProjectCreatedData.ApiToken` or `ProjectApiTokenSecret.Token`) shows `[redacted]`.
 
 ## Webhooks
 
