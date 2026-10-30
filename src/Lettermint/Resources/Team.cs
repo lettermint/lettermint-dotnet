@@ -106,6 +106,38 @@ public sealed class TeamInvites : ApiResource
         => Transport.CallAsync(Operations.DeleteTeamInvite, "Team.Invites.RevokeAsync", [inviteId], default, default, options, cancellationToken);
 }
 
+/// <summary>Team API tokens. Needs the team token.</summary>
+public sealed class TeamApiTokens : ApiResource
+{
+    internal TeamApiTokens(Transport transport)
+        : base(transport)
+    {
+    }
+
+    /// <summary>Lists the team's API tokens, one page at a time. The token values are not included.</summary>
+    public Task<ListTeamApiTokensResponse> ListAsync(ListTeamApiTokensQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.ListTeamApiTokens, "Team.ApiTokens.ListAsync", [], query, default, options, cancellationToken);
+
+    /// <summary>Iterates over every team API token, following <c>next_cursor</c>.</summary>
+    public IAsyncEnumerable<TeamApiToken> IterateAsync(ListTeamApiTokensQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.PaginateAsync<ListTeamApiTokensQuery, ListTeamApiTokensResponse, TeamApiToken>(Operations.ListTeamApiTokens, "Team.ApiTokens.IterateAsync", [], query, options, cancellationToken);
+
+    /// <summary>
+    /// Creates a team API token. The new token can only have abilities that the requesting token has. It copies the
+    /// requesting token's IP allowlist, and it can't outlive the requesting token. The token (<c>Data.Token</c>) is only
+    /// returned once.
+    /// </summary>
+    public Task<TeamApiTokenCreatedResponse> CreateAsync(StoreTeamApiTokenData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.CreateTeamApiToken, "Team.ApiTokens.CreateAsync", [], default, body, options, cancellationToken);
+
+    /// <summary>
+    /// Deletes a team API token. The token stops working immediately. A token can only delete tokens whose abilities it
+    /// also has.
+    /// </summary>
+    public Task<MessageResponse> DeleteAsync(string tokenId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DeleteTeamApiToken, "Team.ApiTokens.DeleteAsync", [tokenId], default, default, options, cancellationToken);
+}
+
 /// <summary>The team of the token. Needs the team token.</summary>
 public sealed class Team : ApiResource
 {
@@ -114,6 +146,7 @@ public sealed class Team : ApiResource
     {
         Members = new TeamMembers(transport);
         Invites = new TeamInvites(transport);
+        ApiTokens = new TeamApiTokens(transport);
     }
 
     /// <summary>Team members.</summary>
@@ -121,6 +154,9 @@ public sealed class Team : ApiResource
 
     /// <summary>Pending team invites.</summary>
     public TeamInvites Invites { get; }
+
+    /// <summary>Team API tokens.</summary>
+    public TeamApiTokens ApiTokens { get; }
 
     /// <summary>Retrieves the team. <c>Include</c> adds features or add-ons.</summary>
     public Task<TeamData> RetrieveAsync(GetTeamQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)

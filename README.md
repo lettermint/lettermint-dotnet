@@ -285,6 +285,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync`, `RetrieveRoleAsync`, `CreateRoleAsync`, `UpdateRoleAsync`, `DeleteRoleAsync`, `DuplicateRoleAsync` |
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync`, `RemoveAsync` |
 | `Team.Invites` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `CreateAsync`, `UpdateAsync`, `RevokeAsync` |
+| `Team.ApiTokens` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
@@ -303,6 +304,25 @@ await foreach (var apiToken in lettermint.Projects.ApiTokens.IterateAsync("proje
 }
 
 await lettermint.Projects.ApiTokens.DeleteAsync("project-id", created.Data.Id);
+```
+
+`Team.ApiTokens.CreateAsync` creates a team API token. The new token can only have abilities that the requesting token has. It copies the requesting token's IP allowlist, and it can't outlive the requesting token (`ExpiresAt` defaults to the requesting token's expiry). The token is only returned once. `DeleteAsync(tokenId)` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
+
+```csharp
+var created = await lettermint.Team.ApiTokens.CreateAsync(new StoreTeamApiTokenData
+{
+    Name = "Terraform",
+    Abilities = ["read:domains", "write:projects"],
+    ExpiresAt = "2027-01-01T00:00:00Z",
+});
+var token = created.Data.Token; // store it now; it is only returned once
+
+await foreach (var apiToken in lettermint.Team.ApiTokens.IterateAsync())
+{
+    Console.WriteLine($"{apiToken.Name} {string.Join(", ", apiToken.Abilities)}");
+}
+
+await lettermint.Team.ApiTokens.DeleteAsync(created.Data.Id);
 ```
 
 `Team.Members.RemoveAsync(userId)` removes a member from the team; the Owner cannot be removed. `FilterProjectId` on `ListTeamMembersQuery` lists only the members who can access that project: members with access to all projects and members selected for it. An unknown project returns an empty list:
@@ -482,7 +502,7 @@ catch (LettermintApiException error)
 }
 ```
 
-Exceptions never contain request headers or tokens. `ToString()`, the debugger and JSON serialization of the client, its sub-clients, the options, builders and the webhook verifier show no tokens or secrets; `ToString()` of records that hold a secret returned by the API (such as `ProjectCreatedData.ApiToken` or `ProjectApiTokenSecret.Token`) shows `[redacted]`.
+Exceptions never contain request headers or tokens. `ToString()`, the debugger and JSON serialization of the client, its sub-clients, the options, builders and the webhook verifier show no tokens or secrets; `ToString()` of records that hold a secret returned by the API (such as `ProjectCreatedData.ApiToken`, `ProjectApiTokenSecret.Token` or `TeamApiTokenSecret.Token`) shows `[redacted]`.
 
 ## Webhooks
 
