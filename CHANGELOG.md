@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.3.0 - 2026-10-30
+
+### What's Changed
+
+* feat: add the inbound.rejected webhook event by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/29
+* feat: manage project API tokens by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/30
+* feat: manage team API tokens by @bjarn in https://github.com/lettermint/lettermint-dotnet/pull/31
+
+**Full Changelog**: https://github.com/lettermint/lettermint-dotnet/compare/v2.2.0...v2.3.0
+
 ## v2.2.0 - 2026-10-23
 
 ### What's Changed
