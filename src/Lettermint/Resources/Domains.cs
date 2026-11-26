@@ -39,7 +39,7 @@ public sealed class Domains : ApiResource
     public Task<MessageResponse> VerifyDnsRecordAsync(string domainId, string recordId, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.VerifyDomainDnsRecord, "Domains.VerifyDnsRecordAsync", [domainId, recordId], default, default, options, cancellationToken);
 
-    /// <summary>Replaces the projects that may send from the domain.</summary>
+    /// <summary>Replaces the projects that may send from the domain. An empty list makes it available to every project in the team.</summary>
     public Task<DomainMutationResponse> UpdateProjectsAsync(string domainId, UpdateDomainProjectsData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.UpdateDomainProjects, "Domains.UpdateProjectsAsync", [domainId], default, body, options, cancellationToken);
 }

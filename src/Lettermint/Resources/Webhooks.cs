@@ -25,7 +25,9 @@ public sealed class WebhookDeliveries : ApiResource
 
     /// <summary>
     /// Sends the delivery's original payload to the webhook again now. The retry counts as a delivery attempt;
-    /// if it fails with a retryable error, automatic retries continue.
+    /// if it fails with a retryable error, automatic retries continue. A delivery whose payload was not retained
+    /// (<c>PayloadRetained</c> is false) cannot be retried: the API answers 409 with
+    /// <c>WEBHOOK_DELIVERY_PAYLOAD_NOT_RETAINED</c>.
     /// </summary>
     public Task<RetryWebhookDeliveryResponse> RetryAsync(string webhookId, string deliveryId, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.RetryWebhookDelivery, "Webhooks.Deliveries.RetryAsync", [webhookId, deliveryId], default, default, options, cancellationToken);

@@ -285,7 +285,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Team` | `RetrieveAsync`, `UpdateAsync`, `UsageAsync`, `RolesAsync`, `RetrieveRoleAsync`, `CreateRoleAsync`, `UpdateRoleAsync`, `DeleteRoleAsync`, `DuplicateRoleAsync` |
 | `Team.Members` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `UpdateAssignmentAsync`, `RemoveAsync` |
 | `Team.Invites` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `CreateAsync`, `UpdateAsync`, `RevokeAsync` |
-| `Team.ApiTokens` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
+| `Team.ApiTokens` | `ListAsync`, `IterateAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync` |
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
@@ -306,7 +306,7 @@ await foreach (var apiToken in lettermint.Projects.ApiTokens.IterateAsync("proje
 await lettermint.Projects.ApiTokens.DeleteAsync("project-id", created.Data.Id);
 ```
 
-`Team.ApiTokens.CreateAsync` creates a team API token. The new token can only have abilities that the requesting token has. It copies the requesting token's IP allowlist, and it can't outlive the requesting token (`ExpiresAt` defaults to the requesting token's expiry). The token is only returned once. `DeleteAsync(tokenId)` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
+`Team.ApiTokens.CreateAsync` creates a team API token. The new token can only have abilities that the requesting token has. It copies the requesting token's IP allowlist, and it can't outlive the requesting token (`ExpiresAt` defaults to the requesting token's expiry). The token is only returned once. `UpdateAsync(tokenId, …)` renames a token or replaces its abilities; `Abilities` replaces the complete list, and each ability must also be held by the requesting token. `DeleteAsync(tokenId)` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
 
 ```csharp
 var created = await lettermint.Team.ApiTokens.CreateAsync(new StoreTeamApiTokenData
@@ -321,6 +321,12 @@ await foreach (var apiToken in lettermint.Team.ApiTokens.IterateAsync())
 {
     Console.WriteLine($"{apiToken.Name} {string.Join(", ", apiToken.Abilities)}");
 }
+
+await lettermint.Team.ApiTokens.UpdateAsync(created.Data.Id, new UpdateTeamApiTokenData
+{
+    Name = "Terraform (read-only)",
+    Abilities = ["read:domains"],
+});
 
 await lettermint.Team.ApiTokens.DeleteAsync(created.Data.Id);
 ```
