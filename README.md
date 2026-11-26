@@ -279,6 +279,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Projects` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `RotateTokenAsync` |
 | `Projects.ApiTokens` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `DeleteAsync(projectId, tokenId)` |
 | `Projects.ReportForwarding` | `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyAsync`, `ResendCodeAsync` |
+| `Projects.TrackingDomain` | `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyAsync` |
 | `Routes` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `VerifyInboundDomainAsync` |
 | `Stats` | `RetrieveAsync` |
 | `Suppressions` | `ListAsync`, `IterateAsync`, `CreateAsync`, `DeleteAsync` |
@@ -322,6 +323,24 @@ await foreach (var apiToken in lettermint.Projects.ApiTokens.IterateAsync("proje
 }
 
 await lettermint.Projects.ApiTokens.DeleteAsync("project-id", created.Data.Id);
+```
+
+`Projects.TrackingDomain.UpdateAsync(projectId, …)` sets the custom domain that open and click tracking links use; it needs a plan with custom tracking domains. Add a CNAME record for the domain that points to `CnameTarget`. Lettermint checks the record in the background, and `VerifyAsync` checks it now. Tracking links keep using the Lettermint tracking domain until the domain is verified. When the check fails, `VerifyAsync` throws `ValidationException` (422) whose `Body` holds the outcome; `TemporaryError` is true when the DNS lookup failed. `DeleteAsync` switches back to the Lettermint tracking domain:
+
+```csharp
+var saved = await lettermint.Projects.TrackingDomain.UpdateAsync("project-id", new UpdateProjectTrackingDomainData { Domain = "track.example.com" });
+Console.WriteLine($"CNAME {saved.Data.Domain} -> {saved.Data.CnameTarget}");
+
+try
+{
+    var verified = await lettermint.Projects.TrackingDomain.VerifyAsync("project-id");
+    Console.WriteLine(verified.Data.VerifiedAt);
+}
+catch (ValidationException error) when (error.Body is { } body)
+{
+    var outcome = body.Deserialize<ProjectTrackingDomainVerificationResponse>()!;
+    Console.WriteLine($"Found {outcome.Data.FoundCname}, expected {outcome.Data.ExpectedCname}");
+}
 ```
 
 `Team.ApiTokens.CreateAsync` creates a team API token. The new token can only have abilities that the requesting token has. It copies the requesting token's IP allowlist, and it can't outlive the requesting token (`ExpiresAt` defaults to the requesting token's expiry). The token is only returned once. `UpdateAsync(tokenId, …)` renames a token or replaces its abilities; `Abilities` replaces the complete list, and each ability must also be held by the requesting token. `DeleteAsync(tokenId)` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:

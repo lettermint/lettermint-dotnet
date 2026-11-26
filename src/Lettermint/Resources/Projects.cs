@@ -32,6 +32,42 @@ public sealed class ReportForwarding : ApiResource
         => Transport.CallAsync(Operations.ResendReportForwardingCode, "Projects.ReportForwarding.ResendCodeAsync", [projectId], default, default, options, cancellationToken);
 }
 
+/// <summary>The custom tracking domain of a project, used by open and click tracking links. Needs the team token.</summary>
+public sealed class TrackingDomain : ApiResource
+{
+    internal TrackingDomain(Transport transport)
+        : base(transport)
+    {
+    }
+
+    /// <summary>
+    /// Retrieves the custom tracking domain and whether its CNAME record is verified. <c>Domain</c> is null when the
+    /// project uses the Lettermint tracking domain.
+    /// </summary>
+    public Task<ProjectTrackingDomain> RetrieveAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.GetProjectTrackingDomain, "Projects.TrackingDomain.RetrieveAsync", [projectId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Sets or replaces the custom tracking domain. Add a CNAME record for the domain that points to
+    /// <c>Data.CnameTarget</c>; tracking links keep using the Lettermint tracking domain until it is verified. Needs a
+    /// plan with custom tracking domains. A domain that another team uses is rejected.
+    /// </summary>
+    public Task<ProjectTrackingDomainMutationResponse> UpdateAsync(string projectId, UpdateProjectTrackingDomainData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.UpdateProjectTrackingDomain, "Projects.TrackingDomain.UpdateAsync", [projectId], default, body, options, cancellationToken);
+
+    /// <summary>Removes the custom tracking domain (HTTP 204). Tracking links use the Lettermint tracking domain again.</summary>
+    public Task DeleteAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.DeleteProjectTrackingDomain, "Projects.TrackingDomain.DeleteAsync", [projectId], default, default, options, cancellationToken);
+
+    /// <summary>
+    /// Checks the CNAME record of the custom tracking domain now. When the record is missing, points elsewhere or the
+    /// DNS lookup failed, the API answers 422: a <see cref="ValidationException"/> whose <c>Body</c> holds the
+    /// <see cref="ProjectTrackingDomainVerificationResponse"/> (<c>TemporaryError</c> is true when the lookup failed).
+    /// </summary>
+    public Task<ProjectTrackingDomainVerificationResponse> VerifyAsync(string projectId, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.VerifyProjectTrackingDomain, "Projects.TrackingDomain.VerifyAsync", [projectId], default, default, options, cancellationToken);
+}
+
 /// <summary>API tokens of a project. Needs the team token.</summary>
 public sealed class ProjectApiTokens : ApiResource
 {
@@ -68,6 +104,7 @@ public sealed class Projects : ApiResource
     {
         ReportForwarding = new ReportForwarding(transport);
         ApiTokens = new ProjectApiTokens(transport);
+        TrackingDomain = new TrackingDomain(transport);
     }
 
     /// <summary>Report forwarding of a project.</summary>
@@ -75,6 +112,9 @@ public sealed class Projects : ApiResource
 
     /// <summary>API tokens of a project.</summary>
     public ProjectApiTokens ApiTokens { get; }
+
+    /// <summary>The custom tracking domain of a project.</summary>
+    public TrackingDomain TrackingDomain { get; }
 
     /// <summary>Lists projects, one page at a time.</summary>
     public Task<ListProjectsResponse> ListAsync(ListProjectsQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
@@ -88,7 +128,7 @@ public sealed class Projects : ApiResource
     public Task<ProjectCreatedData> CreateAsync(StoreProjectData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.CreateProject, "Projects.CreateAsync", [], default, body, options, cancellationToken);
 
-    /// <summary>Retrieves a project.</summary>
+    /// <summary>Retrieves a project. <c>TrackingDomain</c> holds its custom tracking domain.</summary>
     public Task<ProjectData> RetrieveAsync(string projectId, GetProjectQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.GetProject, "Projects.RetrieveAsync", [projectId], query, default, options, cancellationToken);
 
