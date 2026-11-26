@@ -32,7 +32,11 @@ public sealed class Suppressions : ApiResource
     public IAsyncEnumerable<SuppressedRecipientData> IterateAsync(ListSuppressionsQuery? query = null, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.PaginateAsync<ListSuppressionsQuery, ListSuppressionsResponse, SuppressedRecipientData>(Operations.ListSuppressions, "Suppressions.IterateAsync", [], query, options, cancellationToken);
 
-    /// <summary>Adds addresses to the suppression list.</summary>
+    /// <summary>
+    /// Adds addresses (<c>Email</c>, <c>Emails</c>) or whole domains (<c>Domain</c>, <c>Domains</c>) to the suppression
+    /// list. A domain blocks every address at that exact domain and accepts only the <c>manual</c> and
+    /// <c>hard_bounce</c> reasons.
+    /// </summary>
     public Task<SuppressionStoreResponse> CreateAsync(StoreSuppressionData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.CreateSuppressions, "Suppressions.CreateAsync", [], default, body, options, cancellationToken);
 
@@ -129,6 +133,14 @@ public sealed class TeamApiTokens : ApiResource
     /// </summary>
     public Task<TeamApiTokenCreatedResponse> CreateAsync(StoreTeamApiTokenData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
         => Transport.CallAsync(Operations.CreateTeamApiToken, "Team.ApiTokens.CreateAsync", [], default, body, options, cancellationToken);
+
+    /// <summary>
+    /// Renames a team API token or replaces its abilities. Fields left null are not changed. <c>Abilities</c> replaces
+    /// the token's complete list, and each ability must also be held by the requesting token. The token value is not
+    /// returned.
+    /// </summary>
+    public Task<TeamApiToken> UpdateAsync(string tokenId, UpdateTeamApiTokenData body, RequestOptions? options = null, CancellationToken cancellationToken = default)
+        => Transport.CallAsync(Operations.UpdateTeamApiToken, "Team.ApiTokens.UpdateAsync", [tokenId], default, body, options, cancellationToken);
 
     /// <summary>
     /// Deletes a team API token. The token stops working immediately. A token can only delete tokens whose abilities it

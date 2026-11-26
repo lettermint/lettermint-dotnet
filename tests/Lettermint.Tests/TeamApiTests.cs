@@ -25,6 +25,23 @@ public class TeamApiTests
 
     private static string Id(string name) => Ids[name];
 
+    /// <summary>
+    /// Operations in the generated table that have no SDK method yet: the DKIM upgrade and rotation operations and the
+    /// project tracking domain operations, added by the next PRs in this stack. The last one removes this list. Every
+    /// other operation is checked strictly.
+    /// </summary>
+    private static readonly string[] Pending =
+    [
+        "DELETE /domains/{domainId}/dkim/upgrade",
+        "POST /domains/{domainId}/dkim/rotate",
+        "POST /domains/{domainId}/dkim/upgrade",
+        "POST /domains/{domainId}/dkim/upgrade/activate",
+        "DELETE /projects/{projectId}/tracking-domain",
+        "GET /projects/{projectId}/tracking-domain",
+        "POST /projects/{projectId}/tracking-domain/verify",
+        "PUT /projects/{projectId}/tracking-domain",
+    ];
+
     /// <summary>Every operation of the API, called through its public SDK method.</summary>
     private static readonly Dictionary<string, Func<LettermintClient, Task>> Calls = new()
     {
@@ -101,19 +118,21 @@ public class TeamApiTests
         ["PUT /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.UpdateAsync(Id("projectId"), new ReportForwardingRequest { Destination = "reports@example.test" }),
         ["PUT /routes/{routeId}"] = l => l.Routes.UpdateAsync(Id("routeId"), new UpdateRouteData { Name = "Renamed" }),
         ["PUT /team"] = l => l.Team.UpdateAsync(new UpdateTeamData { Name = "Acme" }),
+        ["PUT /team/api-tokens/{tokenId}"] = l => l.Team.ApiTokens.UpdateAsync(Id("tokenId"), new UpdateTeamApiTokenData { Name = "Renamed" }),
         ["PUT /team/invites/{inviteId}"] = l => l.Team.Invites.UpdateAsync(Id("inviteId"), new UpdateTeamInviteData { Email = "jane@example.test", RoleId = "role_1", ProjectAccess = new UpdateTeamInviteDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["PUT /team/roles/{roleId}"] = l => l.Team.UpdateRoleAsync(Id("roleId"), new UpdateTeamRoleData { Name = "Support", Permissions = [RbacPermission.MembersRead] }),
         ["PUT /team/members/{userId}/assignment"] = l => l.Team.Members.UpdateAssignmentAsync(Id("userId"), new UpdateTeamMemberAssignmentData { RoleId = "role_1", ProjectAccess = new UpdateTeamMemberAssignmentDataProjectAccess { Scope = ProjectAccessScope.All } }),
         ["PUT /webhooks/{webhookId}"] = l => l.Webhooks.UpdateAsync(Id("webhookId"), new UpdateWebhookData { BasicAuth = null }),
     };
 
-    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Order());
+    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Except(Pending).Order());
 
     [Fact]
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
-        Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
-        Assert.Equal(77, Operations.All.Count);
+        Assert.Equal(Operations.All.Keys.Except(Pending).Order(), Calls.Keys.Order());
+        Assert.All(Pending, key => Assert.Contains(key, Operations.All.Keys));
+        Assert.Equal(86, Operations.All.Count);
     }
 
     private static HttpResponseMessage ResponseFor(OperationDefinition operation) => operation.ResponseKind switch
@@ -181,7 +200,7 @@ public class TeamApiTests
             [typeof(Team)] = ["CreateRoleAsync", "DeleteRoleAsync", "DuplicateRoleAsync", "RetrieveAsync", "RetrieveRoleAsync", "RolesAsync", "UpdateAsync", "UpdateRoleAsync", "UsageAsync"],
             [typeof(TeamMembers)] = ["IterateAsync", "ListAsync", "RemoveAsync", "RetrieveAsync", "UpdateAssignmentAsync"],
             [typeof(TeamInvites)] = ["CreateAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RevokeAsync", "UpdateAsync"],
-            [typeof(TeamApiTokens)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
+            [typeof(TeamApiTokens)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "UpdateAsync"],
             [typeof(Webhooks)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RegenerateSecretAsync", "RetrieveAsync", "TestAsync", "UpdateAsync"],
             [typeof(WebhookDeliveries)] = ["IterateAsync", "ListAsync", "RetrieveAsync", "RetryAsync"],
         };
@@ -316,6 +335,7 @@ public class TeamApiTests
 
     [Theory]
     [InlineData("WEBHOOK_DELIVERY_NOT_RETRYABLE")]
+    [InlineData("WEBHOOK_DELIVERY_PAYLOAD_NOT_RETAINED")]
     [InlineData("WEBHOOK_DELIVERY_RETRY_IN_PROGRESS")]
     [InlineData("WEBHOOK_DISABLED")]
     public async Task ARejectedWebhookDeliveryRetryThrowsAConflictException(string code)
@@ -686,6 +706,81 @@ public class TeamApiTests
         Assert.Equal("Bearer " + Fake.TeamToken, delete.Header("Authorization"));
         Assert.Null(delete.Body);
         Assert.Null(delete.Header("Content-Type"));
+    }
+
+    [Fact]
+    public async Task UpdatesATeamApiToken()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(200, TeamTokenJson()));
+        TeamApiToken updated = await client.Team.ApiTokens.UpdateAsync("token/1", new UpdateTeamApiTokenData
+        {
+            Name = "Terraform",
+            Abilities = ["read:projects", "write:projects"],
+        });
+        Assert.Equal("token_1", updated.Id);
+        Assert.Equal("Terraform", updated.Name);
+        Assert.Equal(["read:projects", "write:projects"], updated.Abilities);
+        Assert.Equal(["203.0.113.0/24"], updated.AllowedIps);
+        Assert.Equal(ApiTokenSource.Api, updated.CreatedVia);
+        Assert.Equal("2027-01-01T00:00:00Z", updated.ExpiresAt);
+        var update = handler.Requests[0];
+        Assert.Equal("PUT", update.Method);
+        Assert.Equal("https://api.lettermint.co/v1/team/api-tokens/token%2F1", update.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, update.Header("Authorization"));
+        Assert.Null(update.Header("x-lettermint-token"));
+        Assert.Equal("application/json", update.Header("Content-Type"));
+        Assert.Null(update.Header("Idempotency-Key"));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"name":"Terraform","abilities":["read:projects","write:projects"]}"""), update.Json), update.Body);
+
+        await client.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData { Name = "CI" });
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"name":"CI"}"""), handler.Requests[1].Json), handler.Requests[1].Body);
+        await client.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData { Abilities = ["read:domains"] });
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"abilities":["read:domains"]}"""), handler.Requests[2].Json), handler.Requests[2].Body);
+        await client.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData { Abilities = [] });
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"abilities":[]}"""), handler.Requests[3].Json), handler.Requests[3].Body);
+        await client.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData());
+        Assert.Equal("{}", handler.Requests[4].Body);
+    }
+
+    [Fact]
+    public async Task UpdatingATeamApiTokenNeedsTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData { Name = "CI" }));
+        Assert.Equal("Team.ApiTokens.UpdateAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ARejectedTeamApiTokenUpdateThrowsValidationAndNotFoundExceptions()
+    {
+        var (invalid, _) = Fake.Client((_, _) => Fake.Json(422, new { message = "The token can't have abilities you don't have.", errors = new { abilities = new[] { "The token can't have abilities you don't have." } } }));
+        var validation = await Assert.ThrowsAsync<ValidationException>(() => invalid.Team.ApiTokens.UpdateAsync("token_1", new UpdateTeamApiTokenData { Abilities = ["write:team"] }));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, validation.StatusCode);
+        Assert.Equal(["The token can't have abilities you don't have."], validation.Errors!["abilities"]);
+
+        var (missing, _) = Fake.Client((_, _) => Fake.Json(404, new { message = "Not found." }));
+        await Assert.ThrowsAsync<NotFoundException>(() => missing.Team.ApiTokens.UpdateAsync("gone", new UpdateTeamApiTokenData { Name = "CI" }));
+    }
+
+    [Fact]
+    public async Task SuppressesWholeDomains()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(201, new { message = "Added.", data = new { created = new[] { "example.test" }, skipped = Array.Empty<string>() } }));
+        SuppressionStoreResponse stored = await client.Suppressions.CreateAsync(new StoreSuppressionData { Reason = SuppressionCreateReason.Manual, Scope = SuppressionCreateScope.Team, Domain = "example.test" });
+        Assert.Equal(["example.test"], stored.Data.Created);
+        Assert.Empty(stored.Data.Skipped);
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"reason":"manual","scope":"team","domain":"example.test"}"""), handler.Requests[0].Json), handler.Requests[0].Body);
+        await client.Suppressions.CreateAsync(new StoreSuppressionData { Reason = SuppressionCreateReason.HardBounce, Scope = SuppressionCreateScope.Team, Domains = new[] { "example.test", "example.org" } });
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"reason":"hard_bounce","scope":"team","domains":["example.test","example.org"]}"""), handler.Requests[1].Json), handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task SendsAnEmptyProjectListForADomain()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(200, new { }));
+        await client.Domains.UpdateProjectsAsync("domain_1", new UpdateDomainProjectsData { ProjectIds = [] });
+        Assert.Equal("""{"project_ids":[]}""", handler.Requests[0].Body);
     }
 
     [Fact]
@@ -1146,6 +1241,8 @@ public class TeamApiTests
         Assert.StartsWith("Projects.ApiTokens.DeleteAsync: tokenId", deleteProjectToken.Message);
         var deleteTeamToken = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.ApiTokens.DeleteAsync(id!));
         Assert.StartsWith("Team.ApiTokens.DeleteAsync: tokenId", deleteTeamToken.Message);
+        var updateTeamToken = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.ApiTokens.UpdateAsync(id!, new UpdateTeamApiTokenData { Name = "n" }));
+        Assert.StartsWith("Team.ApiTokens.UpdateAsync: tokenId", updateTeamToken.Message);
         Assert.Empty(handler.Requests);
     }
 }

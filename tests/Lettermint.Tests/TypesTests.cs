@@ -96,6 +96,27 @@ public class TypesTests
     }
 
     [Fact]
+    public void AddedResponseFieldsAreOptional()
+    {
+        var message = JsonSerializer.Deserialize<MessageData>("""{"id":"m"}""", LettermintJson.Options)!;
+        Assert.Null(message.RetainedUntil);
+        message = JsonSerializer.Deserialize<MessageData>("""{"id":"m","retained_until":"2026-12-01T00:00:00Z"}""", LettermintJson.Options)!;
+        Assert.Equal("2026-12-01T00:00:00Z", message.RetainedUntil);
+
+        var delivery = JsonSerializer.Deserialize<WebhookDeliveryListData>("""{"id":"d"}""", LettermintJson.Options)!;
+        Assert.Null(delivery.PayloadRetained);
+        delivery = JsonSerializer.Deserialize<WebhookDeliveryListData>("""{"id":"d","payload_retained":false}""", LettermintJson.Options)!;
+        Assert.False(delivery.PayloadRetained);
+
+        var domain = JsonSerializer.Deserialize<DomainData>("""{"id":"d"}""", LettermintJson.Options)!;
+        Assert.Null(domain.DkimTransition);
+        domain = JsonSerializer.Deserialize<DomainData>("""{"id":"d","dkim_transition":{"type":"rotation","state":"grace_period","completes_after":"2026-12-01T00:00:00Z"}}""", LettermintJson.Options)!;
+        Assert.Equal(DkimTransitionType.Rotation, domain.DkimTransition!.Type);
+        Assert.Equal(DkimTransitionPhase.GracePeriod, domain.DkimTransition.State);
+        Assert.Equal("2026-12-01T00:00:00Z", domain.DkimTransition.CompletesAfter);
+    }
+
+    [Fact]
     public void MapsAcceptTheEmptyArrayPhpSendsForAnEmptyMap()
     {
         var withArray = JsonSerializer.Deserialize<MessageData>("""{"id":"m","metadata":[]}""", LettermintJson.Options)!;
