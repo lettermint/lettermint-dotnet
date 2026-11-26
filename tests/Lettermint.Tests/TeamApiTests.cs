@@ -26,16 +26,11 @@ public class TeamApiTests
     private static string Id(string name) => Ids[name];
 
     /// <summary>
-    /// Operations in the generated table that have no SDK method yet: the DKIM upgrade and rotation operations and the
-    /// project tracking domain operations, added by the next PRs in this stack. The last one removes this list. Every
-    /// other operation is checked strictly.
+    /// Operations in the generated table that have no SDK method yet: the project tracking domain operations, added by
+    /// the next PR in this stack, which removes this list. Every other operation is checked strictly.
     /// </summary>
     private static readonly string[] Pending =
     [
-        "DELETE /domains/{domainId}/dkim/upgrade",
-        "POST /domains/{domainId}/dkim/rotate",
-        "POST /domains/{domainId}/dkim/upgrade",
-        "POST /domains/{domainId}/dkim/upgrade/activate",
         "DELETE /projects/{projectId}/tracking-domain",
         "GET /projects/{projectId}/tracking-domain",
         "POST /projects/{projectId}/tracking-domain/verify",
@@ -46,6 +41,7 @@ public class TeamApiTests
     private static readonly Dictionary<string, Func<LettermintClient, Task>> Calls = new()
     {
         ["DELETE /domains/{domainId}"] = l => l.Domains.DeleteAsync(Id("domainId")),
+        ["DELETE /domains/{domainId}/dkim/upgrade"] = l => l.Domains.CancelDkimUpgradeAsync(Id("domainId")),
         ["DELETE /projects/{projectId}"] = l => l.Projects.DeleteAsync(Id("projectId")),
         ["DELETE /projects/{projectId}/api-tokens/{tokenId}"] = l => l.Projects.ApiTokens.DeleteAsync(Id("projectId"), Id("tokenId")),
         ["DELETE /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.DeleteAsync(Id("projectId")),
@@ -90,6 +86,9 @@ public class TeamApiTests
         ["PATCH /messages/{messageId}"] = l => l.Messages.RescheduleAsync(Id("messageId"), new RescheduleMessageRequest { ScheduledAt = "2026-10-01T09:00:00Z" }),
         ["POST /analytics"] = l => l.AnalyticsAsync(new AnalyticsQuery { Metrics = [AnalyticsMetric.Accepted] }),
         ["POST /domains"] = l => l.Domains.CreateAsync(new StoreDomainData { Domain = "example.test" }),
+        ["POST /domains/{domainId}/dkim/rotate"] = l => l.Domains.RotateDkimKeyAsync(Id("domainId")),
+        ["POST /domains/{domainId}/dkim/upgrade"] = l => l.Domains.StartDkimUpgradeAsync(Id("domainId")),
+        ["POST /domains/{domainId}/dkim/upgrade/activate"] = l => l.Domains.ActivateDkimUpgradeAsync(Id("domainId")),
         ["POST /domains/{domainId}/dns-records/verify"] = l => l.Domains.VerifyDnsRecordsAsync(Id("domainId")),
         ["POST /domains/{domainId}/dns-records/{recordId}/verify"] = l => l.Domains.VerifyDnsRecordAsync(Id("domainId"), Id("recordId")),
         ["POST /messages/{messageId}/cancel"] = l => l.Messages.CancelAsync(Id("messageId")),
@@ -189,7 +188,7 @@ public class TeamApiTests
         {
             [typeof(LettermintClient)] = ["AnalyticsAsync", "AnalyticsPagesAsync", "BlockedFileTypesAsync", "PingAsync"],
             [typeof(Emails)] = ["Compose", "PingAsync", "SendAsync", "SendBatchAsync"],
-            [typeof(Domains)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateProjectsAsync", "VerifyDnsRecordAsync", "VerifyDnsRecordsAsync"],
+            [typeof(Domains)] = ["ActivateDkimUpgradeAsync", "CancelDkimUpgradeAsync", "CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RotateDkimKeyAsync", "StartDkimUpgradeAsync", "UpdateProjectsAsync", "VerifyDnsRecordAsync", "VerifyDnsRecordsAsync"],
             [typeof(Messages)] = ["CancelAsync", "EventsAsync", "HtmlAsync", "IterateAsync", "IterateEventsAsync", "ListAsync", "ProcessAsync", "RescheduleAsync", "ResendAsync", "RetrieveAsync", "SourceAsync", "TextAsync"],
             [typeof(Projects)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RotateTokenAsync", "UpdateAsync"],
             [typeof(ProjectApiTokens)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
@@ -763,6 +762,107 @@ public class TeamApiTests
         await Assert.ThrowsAsync<NotFoundException>(() => missing.Team.ApiTokens.UpdateAsync("gone", new UpdateTeamApiTokenData { Name = "CI" }));
     }
 
+    private static JsonObject DkimDomainJson(string type, string? state, string? completesAfter = null) => new()
+    {
+        ["data"] = new JsonObject
+        {
+            ["id"] = "domain_1",
+            ["domain"] = "example.test",
+            ["dkim_transition"] = state is null ? null : new JsonObject { ["type"] = type, ["state"] = state, ["completes_after"] = completesAfter },
+            ["dns_records"] = new JsonArray(new JsonObject { ["id"] = "record_1", ["type"] = "CNAME", ["hostname"] = "lm2._domainkey.example.test" }),
+        },
+        ["message"] = "DKIM updated.",
+    };
+
+    public static TheoryData<string, string, string, int> DkimCalls => new()
+    {
+        { "start upgrade", "POST", "/domains/domain%2F1/dkim/upgrade", 202 },
+        { "cancel upgrade", "DELETE", "/domains/domain%2F1/dkim/upgrade", 200 },
+        { "activate upgrade", "POST", "/domains/domain%2F1/dkim/upgrade/activate", 200 },
+        { "rotate key", "POST", "/domains/domain%2F1/dkim/rotate", 202 },
+    };
+
+    private static readonly string[] DkimChanges = ["start upgrade", "cancel upgrade", "activate upgrade", "rotate key"];
+
+    public static TheoryData<string> DkimNames => new(DkimChanges);
+
+    private static Task<DomainMutationResponse> CallDkim(LettermintClient client, string name, string domainId) => name switch
+    {
+        "start upgrade" => client.Domains.StartDkimUpgradeAsync(domainId),
+        "cancel upgrade" => client.Domains.CancelDkimUpgradeAsync(domainId),
+        "activate upgrade" => client.Domains.ActivateDkimUpgradeAsync(domainId),
+        "rotate key" => client.Domains.RotateDkimKeyAsync(domainId),
+        _ => throw new ArgumentOutOfRangeException(nameof(name)),
+    };
+
+    [Theory]
+    [MemberData(nameof(DkimCalls))]
+    public async Task ChangesTheDkimSetupOfADomain(string name, string method, string path, int status)
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(status, DkimDomainJson("rotation", "preparing")));
+        DomainMutationResponse result = await CallDkim(client, name, "domain/1");
+        Assert.Equal("DKIM updated.", result.Message);
+        Assert.Equal("domain_1", result.Data.Id);
+        Assert.Equal(DkimTransitionType.Rotation, result.Data.DkimTransition!.Type);
+        Assert.Equal(DkimTransitionPhase.Preparing, result.Data.DkimTransition.State);
+        Assert.Null(result.Data.DkimTransition.CompletesAfter);
+        Assert.Equal("lm2._domainkey.example.test", Assert.Single(result.Data.DnsRecords!).Hostname);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(method, request.Method);
+        Assert.Equal("https://api.lettermint.co/v1" + path, request.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, request.Header("Authorization"));
+        Assert.Null(request.Header("x-lettermint-token"));
+        Assert.Null(request.Header("Idempotency-Key"));
+        Assert.Null(request.Body);
+        Assert.Null(request.Header("Content-Type"));
+    }
+
+    [Fact]
+    public async Task ReadsTheDkimUpgradeStates()
+    {
+        var (client, _) = Fake.Client((_, index) => index switch
+        {
+            0 => Fake.Json(200, DkimDomainJson("legacy_upgrade", "ready_to_activate")),
+            1 => Fake.Json(200, DkimDomainJson("legacy_upgrade", "grace_period", "2026-12-01T00:00:00Z")),
+            2 => Fake.Json(200, DkimDomainJson("legacy_upgrade", null)),
+            _ => Fake.Json(202, DkimDomainJson("migration", "paused")),
+        });
+        var ready = await client.Domains.StartDkimUpgradeAsync("domain_1");
+        Assert.Equal(DkimTransitionType.LegacyUpgrade, ready.Data.DkimTransition!.Type);
+        Assert.Equal(DkimTransitionPhase.ReadyToActivate, ready.Data.DkimTransition.State);
+        var grace = await client.Domains.ActivateDkimUpgradeAsync("domain_1");
+        Assert.Equal(DkimTransitionPhase.GracePeriod, grace.Data.DkimTransition!.State);
+        Assert.Equal("2026-12-01T00:00:00Z", grace.Data.DkimTransition.CompletesAfter);
+        var cancelled = await client.Domains.CancelDkimUpgradeAsync("domain_1");
+        Assert.Null(cancelled.Data.DkimTransition);
+        var unknown = await client.Domains.RotateDkimKeyAsync("domain_1");
+        Assert.False(unknown.Data.DkimTransition!.Type.IsKnown);
+        Assert.Equal("paused", unknown.Data.DkimTransition.State.ToString());
+    }
+
+    [Fact]
+    public async Task DkimChangesNeedTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Domains.RotateDkimKeyAsync("domain_1"));
+        Assert.Equal("Domains.RotateDkimKeyAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [MemberData(nameof(DkimNames))]
+    public async Task ADkimChangeInTheWrongStateThrowsAValidationException(string name)
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(422, new { error = new { code = "DKIM_UPGRADE_NOT_READY", message = "The DKIM records are not verified yet." } }));
+        var error = await Assert.ThrowsAsync<ValidationException>(() => CallDkim(client, name, "domain_1"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, error.StatusCode);
+        Assert.Equal("DKIM_UPGRADE_NOT_READY", error.Code);
+        Assert.Equal("The DKIM records are not verified yet.", error.Message);
+
+        var (missing, _) = Fake.Client((_, _) => Fake.Json(404, new { error = new { code = "RESOURCE_NOT_FOUND", message = "Not found." } }));
+        await Assert.ThrowsAsync<NotFoundException>(() => CallDkim(missing, name, "gone"));
+    }
+
     [Fact]
     public async Task SuppressesWholeDomains()
     {
@@ -1243,6 +1343,11 @@ public class TeamApiTests
         Assert.StartsWith("Team.ApiTokens.DeleteAsync: tokenId", deleteTeamToken.Message);
         var updateTeamToken = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.ApiTokens.UpdateAsync(id!, new UpdateTeamApiTokenData { Name = "n" }));
         Assert.StartsWith("Team.ApiTokens.UpdateAsync: tokenId", updateTeamToken.Message);
+        foreach (var dkim in DkimChanges)
+        {
+            var dkimError = await Assert.ThrowsAsync<LettermintConfigException>(() => CallDkim(client, dkim, id!));
+            Assert.Matches(@"^Domains\.(StartDkimUpgrade|CancelDkimUpgrade|ActivateDkimUpgrade|RotateDkimKey)Async: domainId", dkimError.Message);
+        }
         Assert.Empty(handler.Requests);
     }
 }

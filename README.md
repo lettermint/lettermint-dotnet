@@ -274,7 +274,7 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 
 | Property | Methods |
 | --- | --- |
-| `Domains` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `DeleteAsync`, `VerifyDnsRecordsAsync`, `VerifyDnsRecordAsync`, `UpdateProjectsAsync` |
+| `Domains` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `DeleteAsync`, `VerifyDnsRecordsAsync`, `VerifyDnsRecordAsync`, `UpdateProjectsAsync`, `StartDkimUpgradeAsync`, `CancelDkimUpgradeAsync`, `ActivateDkimUpgradeAsync`, `RotateDkimKeyAsync` |
 | `Messages` | `ListAsync`, `IterateAsync`, `RetrieveAsync`, `EventsAsync`, `IterateEventsAsync`, `SourceAsync`, `HtmlAsync`, `TextAsync`, `RescheduleAsync`, `CancelAsync`, `ResendAsync`, `ProcessAsync` |
 | `Projects` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `RotateTokenAsync` |
 | `Projects.ApiTokens` | `ListAsync(projectId)`, `IterateAsync(projectId)`, `CreateAsync(projectId, …)`, `DeleteAsync(projectId, tokenId)` |
@@ -289,6 +289,24 @@ var html = await lettermint.Messages.HtmlAsync("message-id");
 | `Webhooks` | `ListAsync`, `IterateAsync`, `CreateAsync`, `RetrieveAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `RegenerateSecretAsync` |
 | `Webhooks.Deliveries` | `ListAsync(webhookId)`, `IterateAsync(webhookId)`, `RetrieveAsync(webhookId, deliveryId)`, `RetryAsync(webhookId, deliveryId)` |
 | (root) | `PingAsync`, `AnalyticsAsync`, `AnalyticsPagesAsync`, `BlockedFileTypesAsync` |
+
+`Domains.StartDkimUpgradeAsync(domainId)` moves a domain with a legacy DKIM TXT record to managed DKIM. The response lists two new DKIM CNAME records to add to your DNS; the TXT record keeps signing until the upgrade completes. When `DkimTransition.State` is `ready_to_activate`, `ActivateDkimUpgradeAsync` starts a grace period in which both keys are published, and the upgrade completes at `DkimTransition.CompletesAfter`. `CancelDkimUpgradeAsync` cancels an upgrade before its grace period. `RotateDkimKeyAsync` replaces the managed DKIM key early; the CNAME records stay the same. A domain in the wrong state throws `ValidationException` (422) with an error `Code`:
+
+```csharp
+var upgrade = await lettermint.Domains.StartDkimUpgradeAsync("domain-id");
+foreach (var record in upgrade.Data.DnsRecords ?? Array.Empty<DomainDnsRecordData>())
+{
+    Console.WriteLine($"{record.Type} {record.Hostname} {record.Content}");
+}
+
+var domain = await lettermint.Domains.RetrieveAsync("domain-id");
+if (domain.DkimTransition?.State == DkimTransitionPhase.ReadyToActivate)
+{
+    await lettermint.Domains.ActivateDkimUpgradeAsync("domain-id");
+}
+
+await lettermint.Domains.RotateDkimKeyAsync("other-domain-id");
+```
 
 `Webhooks.Deliveries.RetryAsync(webhookId, deliveryId)` sends a delivery's original payload to the webhook again now. The retry counts as a delivery attempt; if it fails with a retryable error, automatic retries continue.
 
