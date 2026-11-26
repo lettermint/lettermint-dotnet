@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lettermint.Internal;
 using Lettermint.Models;
@@ -25,18 +26,6 @@ public class TeamApiTests
 
     private static string Id(string name) => Ids[name];
 
-    /// <summary>
-    /// Operations in the generated table that have no SDK method yet: the project tracking domain operations, added by
-    /// the next PR in this stack, which removes this list. Every other operation is checked strictly.
-    /// </summary>
-    private static readonly string[] Pending =
-    [
-        "DELETE /projects/{projectId}/tracking-domain",
-        "GET /projects/{projectId}/tracking-domain",
-        "POST /projects/{projectId}/tracking-domain/verify",
-        "PUT /projects/{projectId}/tracking-domain",
-    ];
-
     /// <summary>Every operation of the API, called through its public SDK method.</summary>
     private static readonly Dictionary<string, Func<LettermintClient, Task>> Calls = new()
     {
@@ -45,6 +34,7 @@ public class TeamApiTests
         ["DELETE /projects/{projectId}"] = l => l.Projects.DeleteAsync(Id("projectId")),
         ["DELETE /projects/{projectId}/api-tokens/{tokenId}"] = l => l.Projects.ApiTokens.DeleteAsync(Id("projectId"), Id("tokenId")),
         ["DELETE /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.DeleteAsync(Id("projectId")),
+        ["DELETE /projects/{projectId}/tracking-domain"] = l => l.Projects.TrackingDomain.DeleteAsync(Id("projectId")),
         ["DELETE /routes/{routeId}"] = l => l.Routes.DeleteAsync(Id("routeId")),
         ["DELETE /team/api-tokens/{tokenId}"] = l => l.Team.ApiTokens.DeleteAsync(Id("tokenId")),
         ["DELETE /team/invites/{inviteId}"] = l => l.Team.Invites.RevokeAsync(Id("inviteId")),
@@ -67,6 +57,7 @@ public class TeamApiTests
         ["GET /projects/{projectId}/api-tokens"] = l => l.Projects.ApiTokens.ListAsync(Id("projectId")),
         ["GET /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.RetrieveAsync(Id("projectId")),
         ["GET /projects/{projectId}/routes"] = l => l.Routes.ListAsync(Id("projectId")),
+        ["GET /projects/{projectId}/tracking-domain"] = l => l.Projects.TrackingDomain.RetrieveAsync(Id("projectId")),
         ["GET /routes/{routeId}"] = l => l.Routes.RetrieveAsync(Id("routeId")),
         ["GET /stats"] = l => l.Stats.RetrieveAsync(new GetStatsQuery { From = "2026-01-01", To = "2026-01-31" }),
         ["GET /suppressions"] = l => l.Suppressions.ListAsync(),
@@ -100,6 +91,7 @@ public class TeamApiTests
         ["POST /projects/{projectId}/report-forwarding/verify"] = l => l.Projects.ReportForwarding.VerifyAsync(Id("projectId"), new VerifyReportForwardingRequest { Code = "123456" }),
         ["POST /projects/{projectId}/rotate-token"] = l => l.Projects.RotateTokenAsync(Id("projectId")),
         ["POST /projects/{projectId}/routes"] = l => l.Routes.CreateAsync(Id("projectId"), new StoreRouteData { Name = "Inbound", RouteType = RouteType.Inbound }),
+        ["POST /projects/{projectId}/tracking-domain/verify"] = l => l.Projects.TrackingDomain.VerifyAsync(Id("projectId")),
         ["POST /routes/{routeId}/verify-inbound-domain"] = l => l.Routes.VerifyInboundDomainAsync(Id("routeId")),
         ["POST /send"] = l => l.Emails.SendAsync(Fake.Message()),
         ["POST /send/batch"] = l => l.Emails.SendBatchAsync([Fake.Message()]),
@@ -115,6 +107,7 @@ public class TeamApiTests
         ["PUT /domains/{domainId}/projects"] = l => l.Domains.UpdateProjectsAsync(Id("domainId"), new UpdateDomainProjectsData { ProjectIds = ["p"] }),
         ["PUT /projects/{projectId}"] = l => l.Projects.UpdateAsync(Id("projectId"), new UpdateProjectData { Name = "Renamed" }),
         ["PUT /projects/{projectId}/report-forwarding"] = l => l.Projects.ReportForwarding.UpdateAsync(Id("projectId"), new ReportForwardingRequest { Destination = "reports@example.test" }),
+        ["PUT /projects/{projectId}/tracking-domain"] = l => l.Projects.TrackingDomain.UpdateAsync(Id("projectId"), new UpdateProjectTrackingDomainData { Domain = "track.example.test" }),
         ["PUT /routes/{routeId}"] = l => l.Routes.UpdateAsync(Id("routeId"), new UpdateRouteData { Name = "Renamed" }),
         ["PUT /team"] = l => l.Team.UpdateAsync(new UpdateTeamData { Name = "Acme" }),
         ["PUT /team/api-tokens/{tokenId}"] = l => l.Team.ApiTokens.UpdateAsync(Id("tokenId"), new UpdateTeamApiTokenData { Name = "Renamed" }),
@@ -124,13 +117,12 @@ public class TeamApiTests
         ["PUT /webhooks/{webhookId}"] = l => l.Webhooks.UpdateAsync(Id("webhookId"), new UpdateWebhookData { BasicAuth = null }),
     };
 
-    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Except(Pending).Order());
+    public static TheoryData<string> OperationKeys => new(Operations.All.Keys.Order());
 
     [Fact]
     public void HasAnSdkMethodForEveryOperationInTheGeneratedTable()
     {
-        Assert.Equal(Operations.All.Keys.Except(Pending).Order(), Calls.Keys.Order());
-        Assert.All(Pending, key => Assert.Contains(key, Operations.All.Keys));
+        Assert.Equal(Operations.All.Keys.Order(), Calls.Keys.Order());
         Assert.Equal(86, Operations.All.Count);
     }
 
@@ -193,6 +185,7 @@ public class TeamApiTests
             [typeof(Projects)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "RotateTokenAsync", "UpdateAsync"],
             [typeof(ProjectApiTokens)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
             [typeof(ReportForwarding)] = ["DeleteAsync", "ResendCodeAsync", "RetrieveAsync", "UpdateAsync", "VerifyAsync"],
+            [typeof(TrackingDomain)] = ["DeleteAsync", "RetrieveAsync", "UpdateAsync", "VerifyAsync"],
             [typeof(Routes)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync", "RetrieveAsync", "UpdateAsync", "VerifyInboundDomainAsync"],
             [typeof(Stats)] = ["RetrieveAsync"],
             [typeof(Suppressions)] = ["CreateAsync", "DeleteAsync", "IterateAsync", "ListAsync"],
@@ -214,6 +207,7 @@ public class TeamApiTests
         }
         Assert.Equal(typeof(ReportForwarding), typeof(Projects).GetProperty("ReportForwarding")!.PropertyType);
         Assert.Equal(typeof(ProjectApiTokens), typeof(Projects).GetProperty("ApiTokens")!.PropertyType);
+        Assert.Equal(typeof(TrackingDomain), typeof(Projects).GetProperty("TrackingDomain")!.PropertyType);
         Assert.Equal(typeof(TeamMembers), typeof(Team).GetProperty("Members")!.PropertyType);
         Assert.Equal(typeof(TeamInvites), typeof(Team).GetProperty("Invites")!.PropertyType);
         Assert.Equal(typeof(TeamApiTokens), typeof(Team).GetProperty("ApiTokens")!.PropertyType);
@@ -863,6 +857,146 @@ public class TeamApiTests
         await Assert.ThrowsAsync<NotFoundException>(() => CallDkim(missing, name, "gone"));
     }
 
+    private static JsonObject TrackingDomainJson(string? domain, bool verified) => new()
+    {
+        ["domain"] = domain,
+        ["verified"] = verified,
+        ["active"] = verified,
+        ["verified_at"] = verified ? "2026-11-20T09:00:00Z" : null,
+        ["last_verification_at"] = verified ? "2026-11-20T09:00:00Z" : null,
+        ["cname_target"] = "track.lettermint.co",
+    };
+
+    private static JsonObject TrackingVerificationJson(bool verified, string? found, bool temporaryError = false) => new()
+    {
+        ["data"] = new JsonObject
+        {
+            ["domain"] = "track.example.test",
+            ["verified"] = verified,
+            ["verified_at"] = verified ? "2026-11-20T09:00:00Z" : null,
+            ["expected_cname"] = "track.lettermint.co",
+            ["found_cname"] = found,
+            ["temporary_error"] = temporaryError,
+        },
+        ["message"] = verified ? "Tracking domain verified." : "The CNAME record does not point to track.lettermint.co.",
+    };
+
+    [Fact]
+    public async Task RetrievesAndSetsTheTrackingDomainOfAProject()
+    {
+        var (client, handler) = Fake.Client((request, _) => request.Method switch
+        {
+            "GET" => Fake.Json(200, TrackingDomainJson(null, false)),
+            _ => Fake.Json(200, new JsonObject { ["data"] = TrackingDomainJson("track.example.test", false), ["message"] = "Tracking domain saved." }),
+        });
+        ProjectTrackingDomain current = await client.Projects.TrackingDomain.RetrieveAsync("project/1");
+        Assert.Null(current.Domain);
+        Assert.False(current.Verified);
+        Assert.False(current.Active);
+        Assert.Null(current.VerifiedAt);
+        Assert.Equal("track.lettermint.co", current.CnameTarget);
+        var retrieve = handler.Requests[0];
+        Assert.Equal("GET", retrieve.Method);
+        Assert.Equal("https://api.lettermint.co/v1/projects/project%2F1/tracking-domain", retrieve.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, retrieve.Header("Authorization"));
+        Assert.Null(retrieve.Header("x-lettermint-token"));
+        Assert.Null(retrieve.Body);
+
+        ProjectTrackingDomainMutationResponse updated = await client.Projects.TrackingDomain.UpdateAsync("project/1", new UpdateProjectTrackingDomainData { Domain = "track.example.test" });
+        Assert.Equal("Tracking domain saved.", updated.Message);
+        Assert.Equal("track.example.test", updated.Data.Domain);
+        Assert.Equal("track.lettermint.co", updated.Data.CnameTarget);
+        var update = handler.Requests[1];
+        Assert.Equal("PUT", update.Method);
+        Assert.Equal("https://api.lettermint.co/v1/projects/project%2F1/tracking-domain", update.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, update.Header("Authorization"));
+        Assert.Equal("application/json", update.Header("Content-Type"));
+        Assert.Null(update.Header("Idempotency-Key"));
+        Assert.Equal("""{"domain":"track.example.test"}""", update.Body);
+    }
+
+    [Fact]
+    public async Task DeletesTheTrackingDomainOfAProject()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Empty(204));
+        await client.Projects.TrackingDomain.DeleteAsync("project/1");
+        var delete = Assert.Single(handler.Requests);
+        Assert.Equal("DELETE", delete.Method);
+        Assert.Equal("https://api.lettermint.co/v1/projects/project%2F1/tracking-domain", delete.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, delete.Header("Authorization"));
+        Assert.Null(delete.Body);
+        Assert.Null(delete.Header("Content-Type"));
+    }
+
+    [Fact]
+    public async Task VerifiesTheTrackingDomainOfAProject()
+    {
+        var (client, handler) = Fake.Client((_, _) => Fake.Json(200, TrackingVerificationJson(true, "track.lettermint.co")));
+        ProjectTrackingDomainVerificationResponse result = await client.Projects.TrackingDomain.VerifyAsync("project/1");
+        Assert.Equal("Tracking domain verified.", result.Message);
+        Assert.True(result.Data.Verified);
+        Assert.Equal("2026-11-20T09:00:00Z", result.Data.VerifiedAt);
+        Assert.Equal("track.lettermint.co", result.Data.ExpectedCname);
+        Assert.Equal("track.lettermint.co", result.Data.FoundCname);
+        Assert.False(result.Data.TemporaryError);
+        var verify = Assert.Single(handler.Requests);
+        Assert.Equal("POST", verify.Method);
+        Assert.Equal("https://api.lettermint.co/v1/projects/project%2F1/tracking-domain/verify", verify.Url.AbsoluteUri);
+        Assert.Equal("Bearer " + Fake.TeamToken, verify.Header("Authorization"));
+        Assert.Null(verify.Header("x-lettermint-token"));
+        Assert.Null(verify.Body);
+        Assert.Null(verify.Header("Content-Type"));
+    }
+
+    [Theory]
+    [InlineData("other.example.test", false)]
+    [InlineData(null, true)]
+    public async Task AFailedTrackingDomainCheckThrowsAValidationExceptionWithTheOutcome(string? found, bool temporaryError)
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(422, TrackingVerificationJson(false, found, temporaryError)));
+        var error = await Assert.ThrowsAsync<ValidationException>(() => client.Projects.TrackingDomain.VerifyAsync("project_1"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, error.StatusCode);
+        Assert.Equal("The CNAME record does not point to track.lettermint.co.", error.Message);
+        var outcome = error.Body!.Value.Deserialize<ProjectTrackingDomainVerificationResponse>()!;
+        Assert.False(outcome.Data.Verified);
+        Assert.Equal(found, outcome.Data.FoundCname);
+        Assert.Equal(temporaryError, outcome.Data.TemporaryError);
+        Assert.Equal("track.lettermint.co", outcome.Data.ExpectedCname);
+    }
+
+    [Fact]
+    public async Task TrackingDomainsNeedTheTeamToken()
+    {
+        var (client, handler) = Fake.Client(team: false);
+        var error = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Projects.TrackingDomain.RetrieveAsync("project_1"));
+        Assert.Equal("Projects.TrackingDomain.RetrieveAsync needs TeamToken; set LettermintOptions.TeamToken.", error.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ARejectedTrackingDomainThrowsValidationAndPermissionExceptions()
+    {
+        var (invalid, _) = Fake.Client((_, _) => Fake.Json(422, new { message = "The domain is already used by another team.", errors = new { domain = new[] { "The domain is already used by another team." } } }));
+        var validation = await Assert.ThrowsAsync<ValidationException>(() => invalid.Projects.TrackingDomain.UpdateAsync("project_1", new UpdateProjectTrackingDomainData { Domain = "track.example.test" }));
+        Assert.Equal(["The domain is already used by another team."], validation.Errors!["domain"]);
+
+        var (forbidden, _) = Fake.Client((_, _) => Fake.Json(403, new { error = new { code = "forbidden", message = "Your plan does not include custom tracking domains." } }));
+        var permission = await Assert.ThrowsAsync<PermissionException>(() => forbidden.Projects.TrackingDomain.UpdateAsync("project_1", new UpdateProjectTrackingDomainData { Domain = "track.example.test" }));
+        Assert.Equal("Your plan does not include custom tracking domains.", permission.Message);
+
+        var (missing, _) = Fake.Client((_, _) => Fake.Json(404, new { message = "Not found." }));
+        await Assert.ThrowsAsync<NotFoundException>(() => missing.Projects.TrackingDomain.DeleteAsync("gone"));
+    }
+
+    [Fact]
+    public async Task ReadsTheTrackingDomainOfARetrievedProject()
+    {
+        var (client, _) = Fake.Client((_, _) => Fake.Json(200, new JsonObject { ["id"] = "project_1", ["tracking_domain"] = TrackingDomainJson("track.example.test", true) }));
+        ProjectData project = await client.Projects.RetrieveAsync("project_1");
+        Assert.Equal("track.example.test", project.TrackingDomain!.Domain);
+        Assert.True(project.TrackingDomain.Active);
+    }
+
     [Fact]
     public async Task SuppressesWholeDomains()
     {
@@ -1343,6 +1477,14 @@ public class TeamApiTests
         Assert.StartsWith("Team.ApiTokens.DeleteAsync: tokenId", deleteTeamToken.Message);
         var updateTeamToken = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Team.ApiTokens.UpdateAsync(id!, new UpdateTeamApiTokenData { Name = "n" }));
         Assert.StartsWith("Team.ApiTokens.UpdateAsync: tokenId", updateTeamToken.Message);
+        var trackingRetrieve = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Projects.TrackingDomain.RetrieveAsync(id!));
+        Assert.StartsWith("Projects.TrackingDomain.RetrieveAsync: projectId", trackingRetrieve.Message);
+        var trackingUpdate = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Projects.TrackingDomain.UpdateAsync(id!, new UpdateProjectTrackingDomainData { Domain = "d" }));
+        Assert.StartsWith("Projects.TrackingDomain.UpdateAsync: projectId", trackingUpdate.Message);
+        var trackingDelete = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Projects.TrackingDomain.DeleteAsync(id!));
+        Assert.StartsWith("Projects.TrackingDomain.DeleteAsync: projectId", trackingDelete.Message);
+        var trackingVerify = await Assert.ThrowsAsync<LettermintConfigException>(() => client.Projects.TrackingDomain.VerifyAsync(id!));
+        Assert.StartsWith("Projects.TrackingDomain.VerifyAsync: projectId", trackingVerify.Message);
         foreach (var dkim in DkimChanges)
         {
             var dkimError = await Assert.ThrowsAsync<LettermintConfigException>(() => CallDkim(client, dkim, id!));
